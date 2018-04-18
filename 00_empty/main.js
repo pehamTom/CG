@@ -3,24 +3,33 @@ var gl = null;
 //our shader program
 var shaderProgram = null;
 
-var canvasWidth = 800;
-var canvasHeight = 800;
+var canvasWidth = 1300;
+var canvasHeight = 650;
 var aspectRatio = canvasWidth / canvasHeight;
 
 //camera and projection settings
-var animatedAngle = 0;
-var fieldOfViewInRadians = glMatrix.toRadian(30);
-
-var camera = {pos:[0, 0, 0], front:[0, 0, 0], up:[0, 1, 0], pitch:0, yaw:0,
-    cameraSpeed: 0.05, movementX:[0, 0, 0], movementY:[0,0,0], deltaX:0, deltaY:0,
+var camera = {pos:[-10, 0, 0], front:[10, 0, 0], up:[0, 1, 0], pitch:null, yaw:null,
+    cameraSpeed: 0.05, movingForward:false, movingBackward:false,
+    movingLeft:false, movingRight:false, deltaX:0, deltaY:0,
+    animatedAngle:0, fov:glMatrix.toRadian(30),
     update: function(timeElapsed){
         var sensitivity = 0.00005;
-        vec3.add(this.pos, this.pos, vec3.scale([], this.movementX, timeElapsed*sensitivity));
-        vec3.add(this.pos, this.pos, vec3.scale([], this.movementY, timeElapsed*sensitivity));
+        //translation
+        if(this.movingForward) {
+            vec3.add(this.pos, this.pos, vec3.scale([], this.front, timeElapsed*sensitivity));
+        } else if(this.movingBackward) {
+            vec3.add(this.pos, this.pos, vec3.scale([], this.front, -timeElapsed*sensitivity));
+        }
+
+        if(this.movingLeft) {
+            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.up, this.front), timeElapsed*sensitivity));
+        } else if(this.movingRight) {
+            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.front, this.up), timeElapsed*sensitivity));
+        }
 
         //rotation
-        this.yaw += this.deltaX*sensitivity*1000;
-        this.pitch -= this.deltaY*sensitivity*1000;
+        this.yaw += this.deltaX*sensitivity*100;
+        this.pitch -= this.deltaY*sensitivity*100;
         var limit = glMatrix.toRadian(89.0);
         if(this.pitch > limit)
             this.pitch =  limit;
@@ -31,11 +40,27 @@ var camera = {pos:[0, 0, 0], front:[0, 0, 0], up:[0, 1, 0], pitch:0, yaw:0,
         this.front[1] = Math.sin(this.pitch);
         this.front[2] = Math.cos(this.pitch) * Math.sin(this.yaw);
         vec3.normalize(this.front, this.front);
-        var test = vec3.add([], this.pos, vec3.scale([], this.front, vec3.length(this.pos)));
-        console.log(this.pos[0]+ " " + this.pos[1] + " " + this.pos[2]);
         this.deltaX = 0;
         this.deltaY = 0;
-    }};
+    },
+	lookAt: function(point) {
+		this.deltaX = 0;
+		this.deltaY = 0;	//don't rotate because of mouse movement
+        var direction = vec3.subtract([], point, this.pos);
+		vec3.normalize(direction, direction);
+		this.pitch = Math.asin(direction[1]);
+		this.yaw = Math.atan2(direction[2], direction[0]);
+	},
+    zoom: function(offSet) {
+        this.fov += offSet*0.01;
+        if(this.fov < glMatrix.toRadian(1)) {
+            this.fov = glMatrix.toRadian(1);
+        } else if(this.fov > glMatrix.toRadian(70)) {
+            this.fov = glMatrix.toRadian(70);
+        }
+    }
+};
+
 
 var modelViewLocation;
 var positionLocation;
@@ -98,44 +123,51 @@ document.addEventListener("mousemove", function(event){
 });
 
 document.addEventListener("keypress", function(event) {
+
     switch(event.key) {
         case "w": {
-            camera.movementX = camera.front;
+            camera.movingForward = true;
+            camera.movingBackward = false;
         } break;
         case "s": {
-            camera.movementX = vec3.negate([], camera.front)
+            camera.movingBackward = true;
+            camera.movingForward = false;
         } break;
         case "a": {
-            camera.movementY = vec3.normalize([], vec3.cross([], camera.up, camera.front));
+            camera.movingLeft = true;
+            camera.movingRight = false;
         } break;
         case "d": {
-            camera.movementY = vec3.normalize([], vec3.cross([], camera.front, camera.up));
+            camera.movingRight = true;
+            camera.movingLeft = false;
         } break;
         case "r": {
-            camera.deltaX = 0;
-            camera.deltaY = 0;
-            vec3.negate(camera.front, camera.pos);
-            vec3.normalize(camera.front, camera.front);
-            camera.pitch = Math.asin(camera.front[1]);
-            camera.yaw = Math.atan2(camera.front[2], camera.front[0]);
+            camera.lookAt([0,0,0]);
         }break;
     }
 });
 
 document.addEventListener("keyup", function(event) {
     switch(event.key) {
-        case "w":
-        case "s":{
-            camera.movementX = [0,0,0];
+        case "w": {
+            camera.movingForward = false;
         } break;
-        case "a":
+        case "s": {
+            camera.movingBackward = false;
+        } break;
+        case "a": {
+            camera.movingLeft = false;
+        } break;
         case "d": {
-            camera.movementY = [0,0,0];
+            camera.movingRight = false;
         } break;
 
     }
 });
 
+document.addEventListener("wheel", function(event) {
+    camera.zoom(event.deltaY);
+})
 
 /**
  * initializes OpenGL context, compile shader, and load buffers
@@ -214,7 +246,7 @@ function render(timeInMilliseconds) {
     gl.useProgram(shaderProgram);
 
     var projectionMatrix = [];
-    mat4.perspective(projectionMatrix, fieldOfViewInRadians, aspectRatio, 1, 1000);
+    mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 1, 1000);
     camera.update(timeInMilliseconds);
     // TASK 6
 
@@ -236,7 +268,7 @@ function render(timeInMilliseconds) {
     //request another render call as soon as possible
     requestAnimationFrame(render);
 
-    animatedAngle = timeInMilliseconds/1000;
+    camera.animatedAngle = timeInMilliseconds/1000;
 }
 
 function renderQuad(sceneMatrix, viewMatrix) {
@@ -283,7 +315,7 @@ function renderRobot(sceneMatrix, viewMatrix) {
   // TASK 10-2
   // store current sceneMatrix in originSceneMatrix, so it can be restored
   var originSceneMatrix = []
-  mat4.rotate(originSceneMatrix, sceneMatrix, animatedAngle*2, [0,1,0]);
+  mat4.rotate(originSceneMatrix, sceneMatrix, camera.animatedAngle*2, [0,1,0]);
   mat4.translate(originSceneMatrix, originSceneMatrix, [0.7,0.9,0]);
 
   setUpModelViewMatrix(viewMatrix, originSceneMatrix);
