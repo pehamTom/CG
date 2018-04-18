@@ -16,7 +16,6 @@ var camera = {pos:[-10, 0, 0], front:[10, 0, 0], up:[0, 1, 0], pitch:null, yaw:n
     animatedAngle:0, fov:glMatrix.toRadian(30),
     update: function(deltaTime){
         var sensitivity = 0.005;
-        console.log(deltaTime);
         //translation
         if(this.movingForward) {
             vec3.add(this.pos, this.pos, vec3.scale([], this.front, deltaTime*sensitivity));
@@ -31,8 +30,8 @@ var camera = {pos:[-10, 0, 0], front:[10, 0, 0], up:[0, 1, 0], pitch:null, yaw:n
         }
 
         //rotation
-        this.yaw += deltaTime*this.deltaX*sensitivity/10;
-        this.pitch -= deltaTime*this.deltaY*sensitivity/10;
+        this.yaw += deltaTime*this.deltaX*sensitivity/10.0;
+        this.pitch -= deltaTime*this.deltaY*sensitivity/10.0;
         var limit = glMatrix.toRadian(89.0);
         if(this.pitch > limit)
             this.pitch =  limit;
