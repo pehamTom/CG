@@ -7,29 +7,32 @@ var canvasWidth = 1300;
 var canvasHeight = 650;
 var aspectRatio = canvasWidth / canvasHeight;
 
+var lastTime = 0;
+
 //camera and projection settings
 var camera = {pos:[-10, 0, 0], front:[10, 0, 0], up:[0, 1, 0], pitch:null, yaw:null,
     cameraSpeed: 0.05, movingForward:false, movingBackward:false,
     movingLeft:false, movingRight:false, deltaX:0, deltaY:0,
     animatedAngle:0, fov:glMatrix.toRadian(30),
-    update: function(timeElapsed){
-        var sensitivity = 0.00005;
+    update: function(deltaTime){
+        var sensitivity = 0.005;
+        console.log(deltaTime);
         //translation
         if(this.movingForward) {
-            vec3.add(this.pos, this.pos, vec3.scale([], this.front, timeElapsed*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale([], this.front, deltaTime*sensitivity));
         } else if(this.movingBackward) {
-            vec3.add(this.pos, this.pos, vec3.scale([], this.front, -timeElapsed*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale([], this.front, -deltaTime*sensitivity));
         }
 
         if(this.movingLeft) {
-            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.up, this.front), timeElapsed*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.up, this.front), deltaTime*sensitivity));
         } else if(this.movingRight) {
-            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.front, this.up), timeElapsed*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.front, this.up), deltaTime*sensitivity));
         }
 
         //rotation
-        this.yaw += this.deltaX*sensitivity*100;
-        this.pitch -= this.deltaY*sensitivity*100;
+        this.yaw += deltaTime*this.deltaX*sensitivity/10;
+        this.pitch -= deltaTime*this.deltaY*sensitivity/10;
         var limit = glMatrix.toRadian(89.0);
         if(this.pitch > limit)
             this.pitch =  limit;
@@ -123,24 +126,28 @@ document.addEventListener("mousemove", function(event){
 });
 
 document.addEventListener("keypress", function(event) {
-
     switch(event.key) {
+        case "W":
         case "w": {
             camera.movingForward = true;
             camera.movingBackward = false;
         } break;
+        case "S":
         case "s": {
             camera.movingBackward = true;
             camera.movingForward = false;
         } break;
+        case "A":
         case "a": {
             camera.movingLeft = true;
             camera.movingRight = false;
         } break;
+        case "D":
         case "d": {
             camera.movingRight = true;
             camera.movingLeft = false;
         } break;
+        case "R":
         case "r": {
             camera.lookAt([0,0,0]);
         }break;
@@ -149,15 +156,19 @@ document.addEventListener("keypress", function(event) {
 
 document.addEventListener("keyup", function(event) {
     switch(event.key) {
+        case "W":
         case "w": {
             camera.movingForward = false;
         } break;
+        case "S":
         case "s": {
             camera.movingBackward = false;
         } break;
+        case "A":
         case "a": {
             camera.movingLeft = false;
         } break;
+        case "D":
         case "d": {
             camera.movingRight = false;
         } break;
@@ -229,8 +240,11 @@ function initCubeBuffer() {
  */
 function render(timeInMilliseconds) {
 
-
     if(isNaN(timeInMilliseconds)) timeInMilliseconds = 0;
+
+    var deltaTime = timeInMilliseconds-lastTime;
+    lastTime = timeInMilliseconds;
+
 
     //set background color to light gray
     gl.clearColor(0.9, 0.9, 0.9, 1.0);
@@ -247,7 +261,7 @@ function render(timeInMilliseconds) {
 
     var projectionMatrix = [];
     mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 1, 1000);
-    camera.update(timeInMilliseconds);
+    camera.update(deltaTime);
     // TASK 6
 
     //TASK 7
