@@ -72,6 +72,7 @@ var projectionLocation;
 //links to buffer stored on the GPU
 var quadVertexBuffer, quadColorBuffer;
 var cubeVertexBuffer, cubeColorBuffer, cubeIndexBuffer;
+var houseVertexBuffer, houseIndexBuffer;
 
 var quadVertices = new Float32Array([
     -1.0, -1.0,
@@ -117,6 +118,7 @@ var cubeIndices =  new Float32Array([
    20,21,22, 20,22,23
 ]);
 
+var house = parseObjFile(getHouse());
 //handle mouse input
 document.addEventListener("mousemove", function(event){
     if(! event.shiftKey) return;
@@ -198,11 +200,12 @@ function init(resources) {
     //same for color
     colorLocation = gl.getAttribLocation(shaderProgram, "a_color");
 
-    //set buffers for quad
+    //set buffers
     initQuadBuffer();
 
-    // TASK 8-1 //set buffers for cube
     initCubeBuffer();
+
+    initHouseBuffer();
 }
 
 function initQuadBuffer() {
@@ -275,7 +278,7 @@ function render(timeInMilliseconds) {
     mat4.lookAt(viewMatrix, camera.pos, vec3.add([], camera.pos, camera.front), camera.up);
     setUpModelViewMatrix(viewMatrix, sceneMatrix);
     renderQuad(mat4.identity([]), viewMatrix);
-
+    renderHouse();
     // TASK 8-2
     renderRobot(sceneMatrix, viewMatrix);
     //request another render call as soon as possible
@@ -287,10 +290,10 @@ function render(timeInMilliseconds) {
 function renderQuad(sceneMatrix, viewMatrix) {
   var tempSceneMat = []
   mat4.copy(tempSceneMat, sceneMatrix);
-  //TASK 2-2 and TASK 3 and TASK 4
-  mat4.rotate(tempSceneMat, tempSceneMat, glMatrix.toRadian(45), [1, 0, 0]);
-  mat4.translate(tempSceneMat, tempSceneMat, [0, -0.5, 0]);
-  mat4.scale(tempSceneMat, tempSceneMat, [0.5, 0.5, 0]);
+  // //TASK 2-2 and TASK 3 and TASK 4
+  // mat4.rotate(tempSceneMat, tempSceneMat, glMatrix.toRadian(45), [1, 0, 0]);
+  // mat4.translate(tempSceneMat, tempSceneMat, [0, -0.5, 0]);
+  // mat4.scale(tempSceneMat, tempSceneMat, [0.5, 0.5, 0]);
   setUpModelViewMatrix(viewMatrix, tempSceneMat);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, quadVertexBuffer);
@@ -373,13 +376,113 @@ function setUpModelViewMatrix(viewMatrix, sceneMatrix) {
   mat4.mul(modelViewMatrix, viewMatrix, sceneMatrix);
   gl.uniformMatrix4fv(modelViewLocation, false, modelViewMatrix);
 }
+function getHouse() {
+    return  "# Blender v2.79 (sub 0) OBJ File: 'house.blend'\n\
+    # www.blender.org\n\
+    mtllib house.mtl\n\
+    o Cube_Cube.001\n\
+    v -1.132698 -0.002618 1.466474\n\
+    v -1.132698 1.997382 1.466474\n\
+    v -1.132698 -0.002618 -1.556915\n\
+    v -1.132698 1.997382 -1.556915\n\
+    v 1.099442 -0.002618 1.466474\n\
+    v 1.099442 1.997382 1.466474\n\
+    v 1.099442 -0.002618 -1.556915\n\
+    v 1.099442 1.997382 -1.556915\n\
+    v 1.347789 1.997382 -1.893296\n\
+    v 1.347789 1.997382 1.802855\n\
+    v -1.381045 1.997382 -1.893296\n\
+    v -1.381045 1.997382 1.802855\n\
+    v 1.347789 1.997382 -1.893296\n\
+    v 1.347789 1.997382 1.802855\n\
+    v -1.381045 1.997382 -1.893296\n\
+    v -1.381045 1.997382 1.802855\n\
+    v 1.347789 3.820522 -1.893296\n\
+    v 1.347789 3.820522 1.802855\n\
+    v -1.381045 3.820522 -1.893296\n\
+    v -1.381045 3.820522 1.802855\n\
+    v -0.016628 5.218891 -1.893296\n\
+    v -0.016628 5.218891 1.802855\n\
+    v 1.447351 3.768713 -2.028151\n\
+    v 1.447351 3.768713 1.937710\n\
+    v -1.480607 3.768713 1.937710\n\
+    v -1.480607 3.768713 -2.028151\n\
+    v -0.016628 5.269122 -2.028151\n\
+    v -0.016628 5.269122 1.937710\n\
+    v 1.447351 3.856097 -2.028151\n\
+    v 1.447351 3.856097 1.937710\n\
+    v -1.480607 3.856097 1.937710\n\
+    v -1.480607 3.856097 -2.028151\n\
+    v -0.016628 5.356505 -2.028151\n\
+    v -0.016628 5.356505 1.937710\n\
+    vn -1.0000 0.0000 0.0000\n\
+    vn 0.0000 0.0000 -1.0000\n\
+    vn 1.0000 0.0000 0.0000\n\
+    vn 0.0000 0.0000 1.0000\n\
+    vn 0.0000 -1.0000 0.0000\n\
+    vn 0.4616 -0.8871 0.0000\n\
+    vn -0.6927 -0.6759 -0.2517\n\
+    vn -0.6927 -0.6759 0.2517\n\
+    vn -0.4616 -0.8871 0.0000\n\
+    vn 0.6927 -0.6759 -0.2517\n\
+    vn 0.6927 -0.6759 0.2517\n\
+    vn -0.7157 0.6984 0.0000\n\
+    vn 0.7157 0.6984 0.0000\n\
+    usemtl None\n\
+    s off\n\
+    f 1//1 2//1 4//1 3//1\n\
+    f 3//2 4//2 8//2 7//2\n\
+    f 7//3 8//3 6//3 5//3\n\
+    f 5//4 6//4 2//4 1//4\n\
+    f 3//5 7//5 5//5 1//5\n\
+    f 8//5 4//5 10//5 12//5\n\
+    f 11//4 12//4 16//4 15//4\n\
+    f 6//5 8//5 12//5 11//5\n\
+    f 4//5 2//5 9//5 10//5\n\
+    f 2//5 6//5 11//5 9//5\n\
+    f 13//2 15//2 19//2 17//2\n\
+    f 10//4 9//4 13//4 14//4\n\
+    f 9//4 11//4 15//4 13//4\n\
+    f 12//4 10//4 14//4 16//4\n\
+    f 19//6 20//6 25//6 26//6\n\
+    f 16//4 14//4 18//4 20//4\n\
+    f 15//1 16//1 20//1 19//1\n\
+    f 14//3 13//3 17//3 18//3\n\
+    f 17//7 21//7 27//7 23//7\n\
+    f 17//2 19//2 21//2\n\
+    f 20//4 18//4 22//4\n\
+    f 23//2 27//2 33//2 29//2\n\
+    f 25//4 28//4 34//4 31//4\n\
+    f 22//8 18//8 24//8 28//8\n\
+    f 18//9 17//9 23//9 24//9\n\
+    f 21//10 19//10 26//10 27//10\n\
+    f 20//11 22//11 28//11 25//11\n\
+    f 32//12 31//12 34//12 33//12\n\
+    f 30//13 29//13 33//13 34//13\n\
+    f 24//3 23//3 29//3 30//3\n\
+    f 28//4 24//4 30//4 34//4\n\
+    f 27//2 26//2 32//2 33//2\n\
+    f 26//1 25//1 31//1 32//1\n\
+    "
+};
 
-function updateCamera(pitch, yaw) {
-    var qPitch = quat.rotateX(quat.create(), quat.create(), pitch);
-    var qYaw = quat.rotateX(quat.create(), quat.create(), yaw);
+function initHouseBuffer() {
+    houseVertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, houseVertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, house.position, gl.STATIC_DRAW);
 
-    var orientation = quat.mul(quat.create(), qPitch, qYaw);
-    quat.normalize(orientation, orientation);
-    return mat4.fromRotationTranslation(mat4.create(), orientation, camera.pos);
+    houseIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, houseIndexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(house.index), gl.STATIC_DRAW);
+    console.log(house.index);
+    console.log(house.position.length%3);
+}
 
+function renderHouse() {
+    gl.bindBuffer(gl.ARRAY_BUFFER, houseVertexBuffer);
+    gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false,0,0);
+    gl.enableVertexAttribArray(positionLocation);
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, houseIndexBuffer);
+    gl.drawElements(gl.TRIANGLES, house.index.length, gl.UNSIGNED_SHORT, 0);
 }
