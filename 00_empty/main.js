@@ -8,31 +8,29 @@ var canvasWidth = 1300;
 var canvasHeight = 650;
 var aspectRatio = canvasWidth / canvasHeight;
 
-var lastTime = 0;
-
 //camera and projection settings
 var camera = {pos:[-10, 0, 0], front:[10, 0, 0], up:[0, 1, 0], pitch:null, yaw:null,
     cameraSpeed: 0.05, movingForward:false, movingBackward:false,
     movingLeft:false, movingRight:false, deltaX:0, deltaY:0,
     animatedAngle:0, fov:glMatrix.toRadian(30),
-    update: function(deltaTime){
+    update: function(){
         var sensitivity = 0.005;
         //translation
         if(this.movingForward) {
-            vec3.add(this.pos, this.pos, vec3.scale([], this.front, deltaTime*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale([], this.front, timer.delta*sensitivity));
         } else if(this.movingBackward) {
-            vec3.add(this.pos, this.pos, vec3.scale([], this.front, -deltaTime*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale([], this.front, -timer.delta*sensitivity));
         }
 
         if(this.movingLeft) {
-            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.up, this.front), deltaTime*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.up, this.front), timer.delta*sensitivity));
         } else if(this.movingRight) {
-            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.front, this.up), deltaTime*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.front, this.up), timer.delta*sensitivity));
         }
 
         //rotation
-        this.yaw += deltaTime*this.deltaX*sensitivity/10.0;
-        this.pitch -= deltaTime*this.deltaY*sensitivity/10.0;
+        this.yaw += timer.delta*this.deltaX*sensitivity/10.0;
+        this.pitch -= timer.delta*this.deltaY*sensitivity/10.0;
         var limit = glMatrix.toRadian(89.0);
         if(this.pitch > limit)
             this.pitch =  limit;
@@ -63,6 +61,21 @@ var camera = {pos:[-10, 0, 0], front:[10, 0, 0], up:[0, 1, 0], pitch:null, yaw:n
         }
     }
 };
+
+var timer = {elapsed: 0, delta:0, offSet:0, prev:0, absolute:0,
+            reset: function() {
+                this.offSet = this.absolute;
+                this.elapsed = 0;
+                this.delta = 0;
+            },
+            advance: function(timeInMilliseconds) {
+                if(isNaN(timeInMilliseconds)) return;
+                this.absolute = timeInMilliseconds;
+                this.prev = this.elapsed;
+                this.elapsed = timeInMilliseconds - this.offSet;
+                this.delta = this.elapsed - this.prev;
+            }
+}
 
 //links to buffer stored on the GPU
 var quadVertexBuffer, quadColorBuffer;
@@ -147,6 +160,10 @@ document.addEventListener("keypress", function(event) {
         case "r": {
             camera.lookAt([0,0,0]);
         }break;
+        case "T":
+        case "t": {
+            timer.reset();
+        } break;
     }
 });
 
@@ -230,11 +247,7 @@ function initCubeBuffer() {
  */
 function render(timeInMilliseconds) {
 
-    if(isNaN(timeInMilliseconds)) timeInMilliseconds = 0;
-
-    var deltaTime = timeInMilliseconds-lastTime;
-    lastTime = timeInMilliseconds;
-
+    timer.advance(timeInMilliseconds);
 
     //set background color to light gray
     gl.clearColor(0.9, 0.9, 0.9, 1.0);
@@ -255,10 +268,10 @@ function render(timeInMilliseconds) {
     mat4.identity(sceneMatrix);
     mat4.lookAt(viewMatrix, camera.pos, vec3.add([], camera.pos, camera.front), camera.up);
     mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 1, 1000);
-    camera.update(deltaTime);
+    camera.update();
 
     shaderProgram1.setProjectionMat(projectionMatrix);
-    renderQuad(mat4.identity([]), viewMatrix);
+    renderQuad(mat4.identity([]), viewMatrix, timeInMilliseconds);
     // TASK 8-2
     renderRobot(sceneMatrix, viewMatrix);
     //request another render call as soon as possible
@@ -267,16 +280,16 @@ function render(timeInMilliseconds) {
     gl.useProgram(shaderProgram2.program);
     shaderProgram2.setProjectionMat(projectionMatrix);
     renderHouse(mat4.identity([]), viewMatrix);
-    camera.animatedAngle = timeInMilliseconds/1000;
+    camera.animatedAngle = timer.elapsed/1000;
 }
 
 function renderQuad(sceneMatrix, viewMatrix) {
   var tempSceneMat = []
   mat4.copy(tempSceneMat, sceneMatrix);
   // //TASK 2-2 and TASK 3 and TASK 4
-  mat4.rotate(tempSceneMat, tempSceneMat, glMatrix.toRadian(45), [1, 0, 0]);
-  mat4.translate(tempSceneMat, tempSceneMat, [0, -0.5, 0]);
-  mat4.scale(tempSceneMat, tempSceneMat, [0.5, 0.5, 0]);
+  mat4.rotate(tempSceneMat, tempSceneMat, glMatrix.toRadian(90), [0, 1, 0]);
+  mat4.translate(tempSceneMat, tempSceneMat, [0.1*Math.sin(timer.elapsed/100), timer.elapsed/1000, 0]);
+  mat4.scale(tempSceneMat, tempSceneMat, [0.3, 0.3, 0.3]);
   shaderProgram1.setupModelView(viewMatrix, tempSceneMat);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, quadVertexBuffer);
@@ -372,7 +385,8 @@ function initHouseBuffer() {
 }
 
 function renderHouse(viewMatrix, originSceneMatrix) {
-    var tempSceneMat = mat4.translate([], originSceneMatrix, [0, 4, 0]);
+    var tempSceneMat = mat4.translate([], originSceneMatrix, [0, 2, 0]);
+    tempSceneMat = mat4.scale(tempSceneMat, tempSceneMat, [0.2, 0.2, 0.2])
     shaderProgram2.setupModelView(viewMatrix, tempSceneMat);
     gl.bindBuffer(gl.ARRAY_BUFFER, houseVertexBuffer);
     gl.vertexAttribPointer(shaderProgram2.positionLocation, 3, gl.FLOAT, false,0,0);
