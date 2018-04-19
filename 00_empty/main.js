@@ -3,11 +3,13 @@ var gl = null;
 //our shader program
 var shaderProgram1 = null;
 var shaderProgram2 = null;
+var shaderProgram3 = null;
 
 var canvasWidth = 1300;
 var canvasHeight = 650;
 var aspectRatio = canvasWidth / canvasHeight;
 
+var ext;
 //camera and projection settings
 var camera = {pos:[-10, 0, 0], front:[10, 0, 0], up:[0, 1, 0], pitch:null, yaw:null,
     cameraSpeed: 0.05, movingForward:false, movingBackward:false,
@@ -59,6 +61,11 @@ var camera = {pos:[-10, 0, 0], front:[10, 0, 0], up:[0, 1, 0], pitch:null, yaw:n
         } else if(this.fov > glMatrix.toRadian(70)) {
             this.fov = glMatrix.toRadian(70);
         }
+    },
+    reset: function() {
+        this.pos = [-10, 0, 0];
+        this.up = [0, 1, 0];
+        this.lookAt(vec3.negate(this.front, this.pos));
     }
 };
 
@@ -78,25 +85,12 @@ var timer = {elapsed: 0, delta:0, offSet:0, prev:0, absolute:0,
 }
 
 //links to buffer stored on the GPU
-var quadVertexBuffer, quadColorBuffer;
+var quadVertexBuffer, quadColorBuffer, quadPosBuffer;
 var cubeVertexBuffer, cubeColorBuffer, cubeIndexBuffer;
 var houseVertexBuffer, houseIndexBuffer;
 
-var quadVertices = new Float32Array([
-    -1.0, -1.0,
-    1.0, -1.0,
-    -1.0, 1.0,
-    -1.0, 1.0,
-    1.0, -1.0,
-    1.0, 1.0]);
-
-var quadColors = new Float32Array([
-    1, 0, 0, 1,
-    0, 1, 0, 1,
-    0, 0, 1, 1,
-    0, 0, 1, 1,
-    0, 1, 0, 1,
-    0, 0, 0, 1]);
+var maxPart = 100;
+var particlesCount = 1;
 
 var s = 0.3; //size of cube
 var cubeVertices = new Float32Array([
@@ -127,6 +121,7 @@ var cubeIndices =  new Float32Array([
 ]);
 
 var house;
+var testEmitter;
 //handle mouse input
 document.addEventListener("mousemove", function(event){
     if(! event.shiftKey) return;
@@ -162,7 +157,7 @@ document.addEventListener("keypress", function(event) {
         }break;
         case "T":
         case "t": {
-            timer.reset();
+            reset();
         } break;
     }
 });
@@ -200,32 +195,32 @@ function init(resources) {
     //create a GL context
     gl = createContext(canvasWidth, canvasHeight);
 
+    ext = gl.getExtension("ANGLE_instanced_arrays");
     //in WebGL / OpenGL3 we have to create and use our own shaders for the programmable pipeline
     //create the shader program
     shaderProgram1 = new ShaderProgram(resources.vs1, resources.fs);
     shaderProgram2 = new ShaderProgram(resources.vs2, resources.fs);
+    shaderProgram3 = new ShaderProgram(resources.vs3, resources.fs2);
+
     //same for color
     shaderProgram1.colorLocation = gl.getAttribLocation(shaderProgram1.program, "a_color");
-    //set buffers
-    initQuadBuffer();
+
+    shaderProgram3.colorLocation = gl.getAttribLocation(shaderProgram3.program, "a_color");
+    shaderProgram3.centerLocation = gl.getAttribLocation(shaderProgram3.program, "a_centerPos");
+    shaderProgram3.timeLocation = gl.getAttribLocation(shaderProgram3.program, "a_time");
+    shaderProgram3.directionLocation = gl.getUniformLocation(shaderProgram3.program, "u_generalDirection");
+    shaderProgram3.lifeTimeLocation = gl.getUniformLocation(shaderProgram3.program, "u_lifeTime");
+    shaderProgram3.massLocation = gl.getUniformLocation(shaderProgram3.program, "u_mass");
+    shaderProgram3.accelerationLocation = gl.getAttribLocation(shaderProgram3.program, "a_acceleration");
+    shaderProgram3.initVelLocation = gl.getAttribLocation(shaderProgram3.program, "a_initVel");
+
     initCubeBuffer();
     house = resources.house;
     initHouseBuffer();
+
+    testEmitter = new Emitter([0,0,0], 10000, 0.0, [1,1,0]);
 }
 
-function initQuadBuffer() {
-
-  //create buffer for vertices
-  quadVertexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, quadVertexBuffer);
-  //copy data to GPU
-  gl.bufferData(gl.ARRAY_BUFFER, quadVertices, gl.STATIC_DRAW);
-
-  //same for the color
-  quadColorBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, quadColorBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, quadColors, gl.STATIC_DRAW);
-}
 
 function initCubeBuffer() {
 
@@ -270,42 +265,21 @@ function render(timeInMilliseconds) {
     mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 1, 1000);
     camera.update();
 
-    shaderProgram1.setProjectionMat(projectionMatrix);
-    renderQuad(mat4.identity([]), viewMatrix, timeInMilliseconds);
-    // TASK 8-2
-    renderRobot(sceneMatrix, viewMatrix);
-    //request another render call as soon as possible
-    requestAnimationFrame(render);
-
+    console.log(timer.delta);
+    testEmitter.update();
+    testEmitter.render(viewMatrix, sceneMatrix, projectionMatrix);
     gl.useProgram(shaderProgram2.program);
     shaderProgram2.setProjectionMat(projectionMatrix);
     renderHouse(mat4.identity([]), viewMatrix);
+
+    gl.useProgram(shaderProgram1.program);
+    shaderProgram1.setProjectionMat(projectionMatrix);
+    // TASK 8-2
+    renderRobot(sceneMatrix, viewMatrix);
+
     camera.animatedAngle = timer.elapsed/1000;
-}
-
-function renderQuad(sceneMatrix, viewMatrix) {
-  var tempSceneMat = []
-  mat4.copy(tempSceneMat, sceneMatrix);
-  // //TASK 2-2 and TASK 3 and TASK 4
-  mat4.rotate(tempSceneMat, tempSceneMat, glMatrix.toRadian(90), [0, 1, 0]);
-  mat4.translate(tempSceneMat, tempSceneMat, [0.1*Math.sin(timer.elapsed/100), timer.elapsed/1000, 0]);
-  mat4.scale(tempSceneMat, tempSceneMat, [0.3, 0.3, 0.3]);
-  shaderProgram1.setupModelView(viewMatrix, tempSceneMat);
-
-  gl.bindBuffer(gl.ARRAY_BUFFER, quadVertexBuffer);
-  gl.vertexAttribPointer(shaderProgram1.positionLocation, 2, gl.FLOAT, false, 0, 0);
-
-  //enable this vertex attribute
-  gl.enableVertexAttribArray(shaderProgram1.positionLocation);
-
-  //const colorLocation = gl.getAttribLocation(shaderProgram, 'a_color');
-  //gl.enableVertexAttribArray(colorLocation);
-  gl.bindBuffer(gl.ARRAY_BUFFER, quadColorBuffer);
-  gl.vertexAttribPointer(shaderProgram1.colorLocation, 4, gl.FLOAT, false, 0, 0);
-  gl.enableVertexAttribArray(shaderProgram1.colorLocation);
-
-  // draw the bound data as 6 vertices = 2 triangles starting at index 0
-  gl.drawArrays(gl.TRIANGLES, 0, 6);
+    //request another render call as soon as possible
+    requestAnimationFrame(render);
 }
 
 function renderCube() {
@@ -314,6 +288,7 @@ function renderCube() {
 }
 
 var trans = 0;
+var particlesCount = 1;
 function renderRobot(sceneMatrix, viewMatrix) {
 
   gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexBuffer);
@@ -359,6 +334,8 @@ loadResources({
   vs1: 'shader/simple.vs.glsl',
   fs: 'shader/simple.fs.glsl',
   vs2: "shader/nocolorshader.vs.glsl",
+  vs3: "shader/particleShader.vs.glsl",
+  fs2: "shader/particleShader.fs.glsl",
   house: "./house.obj"
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
@@ -386,7 +363,7 @@ function initHouseBuffer() {
 
 function renderHouse(viewMatrix, originSceneMatrix) {
     var tempSceneMat = mat4.translate([], originSceneMatrix, [0, 2, 0]);
-    tempSceneMat = mat4.scale(tempSceneMat, tempSceneMat, [0.2, 0.2, 0.2])
+    tempSceneMat = mat4.scale(tempSceneMat, tempSceneMat, [0.2, 0.2, 0.2]);
     shaderProgram2.setupModelView(viewMatrix, tempSceneMat);
     gl.bindBuffer(gl.ARRAY_BUFFER, houseVertexBuffer);
     gl.vertexAttribPointer(shaderProgram2.positionLocation, 3, gl.FLOAT, false,0,0);
@@ -412,5 +389,114 @@ function ShaderProgram(vs, fs) {
         var modelViewMatrix = [];
         mat4.mul(modelViewMatrix, viewMatrix, sceneMatrix);
         gl.uniformMatrix4fv(this.modelViewLoc, false, modelViewMatrix);
+    }
+}
+
+function reset() {
+    timer.reset();
+    camera.reset();
+}
+
+function Emitter(emitterPos, maxNumPart, mass, direction) {
+    this.quadVertices = new Float32Array([
+      -1.0, -1.0, 0.0,
+      1.0, -1.0, 0.0,
+      -1.0, 1.0, 0.0,
+      -1.0, 1.0, 0.0,
+      1.0, -1.0, 0.0,
+      1.0, 1.0, 0.0]);
+    this.quadColors = new Float32Array([
+      1, 0.5, 0, 1,
+      1, 0.5, 0, 1,
+      1, 0.5, 0, 1,
+      1, 0.5, 0, 1,
+      1, 0.5, 0, 1,
+      1, 0.5, 0, 1]);
+
+    this.maxNumPart = maxNumPart;
+    this.mass = mass;
+    this.numPart = maxNumPart; //only for testing
+    this.lifeParticles = 0;
+    this.direction = direction;
+    this.accel = new Float32Array([
+        0.0,0.0,0.0
+    ]);
+    this.pos = new Float32Array(maxNumPart*4);
+    this.time = new Float32Array(maxNumPart);
+
+    for(i = 0; i < maxNumPart; i++) {
+        this.pos[i*4] = 0.1 * (Math.random() < 0.5 ? i*Math.random() : -i*Math.random());
+        this.pos[i*4+1] = 0.1 * (Math.random() < 0.5 ? i*Math.random() : -i*Math.random());
+        this.pos[i*4+2] = 0;
+        this.pos[i*4+3] = 0.05;
+        this.time[i] = 0;
+    }
+
+    this.quadBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, this.quadVertices, gl.STATIC_DRAW);
+
+    this.colorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, this.quadColors, gl.STATIC_DRAW);
+
+    this.accelBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.accelBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, this.accel, gl.STATIC_DRAW);
+
+    this.timeBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.timeBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, this.time, gl.DYNAMIC_DRAW);
+
+    this.posBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, this.pos, gl.STATIC_DRAW);
+
+    this.update = function() {
+        for(i = 0; i < this.numPart; i++) {
+            this.time[i] += 0.001;
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.timeBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.time), gl.DYNAMIC_DRAW);
+
+    };
+
+    this.render = function(viewMatrix, sceneMatrix, projectionMatrix) {
+        // this.numPart = 10;
+         gl.useProgram(shaderProgram3.program);
+         gl.uniformMatrix4fv(shaderProgram3.projectionLocation, false, projectionMatrix);
+
+        var tempSceneMat = []
+        mat4.copy(tempSceneMat, sceneMatrix);
+        // //TASK 2-2 and TASK 3 and TASK 4
+        mat4.rotate(tempSceneMat, tempSceneMat, glMatrix.toRadian(90), [0, 1, 0]);
+        //mat4.translate(tempSceneMat, tempSceneMat, [0.1*Math.sin(timer.elapsed/100), timer.elapsed/1000, 0]);
+        mat4.scale(tempSceneMat, tempSceneMat, [0.1, 0.1, 0.1]);
+        shaderProgram3.setupModelView(viewMatrix, tempSceneMat);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
+        gl.vertexAttribPointer(shaderProgram3.positionLocation, 3, gl.FLOAT, false, 0, 0);
+        ext.vertexAttribDivisorANGLE(shaderProgram3.positionLocation, 0);
+        //enable this vertex attribute
+        gl.enableVertexAttribArray(shaderProgram3.positionLocation);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
+        gl.enableVertexAttribArray(shaderProgram3.centerLocation);
+        gl.vertexAttribPointer(shaderProgram3.centerLocation, 4, gl.FLOAT, false, 0, 0);
+        ext.vertexAttribDivisorANGLE(shaderProgram3.centerLocation, 1);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+        gl.vertexAttribPointer(shaderProgram3.colorLocation, 4, gl.FLOAT, false, 0, 0);
+        ext.vertexAttribDivisorANGLE(shaderProgram3.colorLocation, 0);
+        gl.enableVertexAttribArray(shaderProgram3.colorLocation);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.timeBuffer);
+        gl.vertexAttribPointer(shaderProgram3.timeLocation, 1, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shaderProgram3.timeLocation);
+        ext.vertexAttribDivisorANGLE(shaderProgram3.timeLocation, 1);
+
+        // draw the bound data as 6 vertices = 2 triangles starting at index 0
+        ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, this.numPart);
+        ext.vertexAttribDivisorANGLE(shaderProgram3.colorLocation, 0); // gotta do this --> SUPERSTRANGE
     }
 }
