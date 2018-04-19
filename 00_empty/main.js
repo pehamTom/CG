@@ -211,14 +211,13 @@ function init(resources) {
     shaderProgram3.directionLocation = gl.getUniformLocation(shaderProgram3.program, "u_generalDirection");
     shaderProgram3.lifeTimeLocation = gl.getUniformLocation(shaderProgram3.program, "u_lifeTime");
     shaderProgram3.massLocation = gl.getUniformLocation(shaderProgram3.program, "u_mass");
-    shaderProgram3.accelerationLocation = gl.getAttribLocation(shaderProgram3.program, "a_acceleration");
+    shaderProgram3.offsetLocation = gl.getAttribLocation(shaderProgram3.program, "a_offset");
     shaderProgram3.initVelLocation = gl.getAttribLocation(shaderProgram3.program, "a_initVel");
 
     initCubeBuffer();
     house = resources.house;
     initHouseBuffer();
-
-    testEmitter = new Emitter([0,0,0], 10000, 0.0, [1,1,0]);
+    testEmitter = new Emitter([0,1000,0], [800,0,0], [0,0,800], 100000, 5000, 10000, 10, [0,0,0,0.05]);
 }
 
 
@@ -236,7 +235,6 @@ function initCubeBuffer() {
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIndexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeIndices), gl.STATIC_DRAW);
 }
-
 /**
  * render one frame
  */
@@ -245,7 +243,7 @@ function render(timeInMilliseconds) {
     timer.advance(timeInMilliseconds);
 
     //set background color to light gray
-    gl.clearColor(0.9, 0.9, 0.9, 1.0);
+    gl.clearColor(0.2, 0.2, 0.2, 1.0);
     //clear the buffer
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     //enable depth test to let objects in front occluse objects further away
@@ -265,7 +263,6 @@ function render(timeInMilliseconds) {
     mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 1, 1000);
     camera.update();
 
-    console.log(timer.delta);
     testEmitter.update();
     testEmitter.render(viewMatrix, sceneMatrix, projectionMatrix);
     gl.useProgram(shaderProgram2.program);
@@ -397,74 +394,96 @@ function reset() {
     camera.reset();
 }
 
-function Emitter(emitterPos, maxNumPart, mass, direction) {
+function Emitter(emitterPos, planeX, planeZ, maxNumPart, partsPerSec, maxLifeTime, mass, direction) {
     this.quadVertices = new Float32Array([
       -1.0, -1.0, 0.0,
       1.0, -1.0, 0.0,
       -1.0, 1.0, 0.0,
-      -1.0, 1.0, 0.0,
-      1.0, -1.0, 0.0,
       1.0, 1.0, 0.0]);
-    this.quadColors = new Float32Array([
-      1, 0.5, 0, 1,
-      1, 0.5, 0, 1,
-      1, 0.5, 0, 1,
-      1, 0.5, 0, 1,
-      1, 0.5, 0, 1,
-      1, 0.5, 0, 1]);
 
+    this.quadColors = new Float32Array([
+      1, 1, 1, 1,
+      1, 1, 1, 1,
+      1, 1, 1, 1,
+      1, 1, 1, 1,
+      1, 1, 1, 1,
+      1, 1, 1, 1,]);
+
+    this.emitterPos = emitterPos;
     this.maxNumPart = maxNumPart;
     this.mass = mass;
-    this.numPart = maxNumPart; //only for testing
-    this.lifeParticles = 0;
+    this.numPart = 0;
+    this.maxLifeTime = maxLifeTime;
     this.direction = direction;
-    this.accel = new Float32Array([
-        0.0,0.0,0.0
-    ]);
+    this.lastusedParticle = 0;
+    this.partsPerSec = partsPerSec;
+    this.offset = new Float32Array(maxNumPart*3);
     this.pos = new Float32Array(maxNumPart*4);
     this.time = new Float32Array(maxNumPart);
+    this.planeX = planeX;
+    this.planeZ = planeZ;
 
-    for(i = 0; i < maxNumPart; i++) {
-        this.pos[i*4] = 0.1 * (Math.random() < 0.5 ? i*Math.random() : -i*Math.random());
-        this.pos[i*4+1] = 0.1 * (Math.random() < 0.5 ? i*Math.random() : -i*Math.random());
-        this.pos[i*4+2] = 0;
-        this.pos[i*4+3] = 0.05;
-        this.time[i] = 0;
-    }
-
-    this.quadBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, this.quadVertices, gl.STATIC_DRAW);
-
-    this.colorBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, this.quadColors, gl.STATIC_DRAW);
-
-    this.accelBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.accelBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, this.accel, gl.STATIC_DRAW);
-
+    this.quadBuffer = setupStaticArrayBuffer(this.quadVertices);
+    this.colorBuffer = setupStaticArrayBuffer(this.quadColors);
+    this.offsetBuffer = gl.createBuffer();
     this.timeBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.timeBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, this.time, gl.DYNAMIC_DRAW);
-
     this.posBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, this.pos, gl.STATIC_DRAW);
 
     this.update = function() {
-        for(i = 0; i < this.numPart; i++) {
-            this.time[i] += 0.001;
+        var partsToSpawn = this.partsPerSec*timer.delta/1000;
+        for(i = 0; i < partsToSpawn; i++) {
+            var prev = this.lastusedParticle;
+            for(j = this.lastusedParticle+1; j != (this.lastusedParticle-1)%this.maxNumPart; j = (j+1)%this.maxNumPart) {
+                if(this.time[j] <= 0) { //spawn particle
+
+                    this.lastusedParticle=j;
+                    break;
+                }
+            }
+            if(j == prev) { //all particles are alive
+                break;
+            }
+            var j = this.lastusedParticle;
+            this.time[j] = this.maxLifeTime;
+            var rand1 = Math.random();
+            var rand2 = Math.random();
+            var rand3 = Math.random();
+            var planeOffset = [];
+            vec3.add(planeOffset, this.emitterPos,
+                vec3.add([], vec3.scale([], this.planeX,(rand1*2-1)),
+                vec3.scale([], this.planeZ, (rand2*2-1))));
+
+            this.offset[j*3] = planeOffset[0];
+            this.offset[j*3+1] = this.emitterPos[1];
+            this.offset[j*3+2] = planeOffset[2];
+
+            this.pos[j*4] = this.direction[0]+(2*rand1-1)*30;
+            this.pos[j*4+1] = this.direction[1]+rand2;
+            this.pos[j*4+2] = this.direction[2]+rand3;
+            this.pos[j*4+3] = this.direction[3];
+
+
+        }
+        for(i = 0; i < this.maxNumPart; i++) {
+            this.time[i] -= timer.delta;
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, this.timeBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.time), gl.DYNAMIC_DRAW);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, this.pos, gl.DYNAMIC_DRAW);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.offsetBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, this.offset, gl.DYNAMIC_DRAW);
 
     };
 
     this.render = function(viewMatrix, sceneMatrix, projectionMatrix) {
         // this.numPart = 10;
-         gl.useProgram(shaderProgram3.program);
-         gl.uniformMatrix4fv(shaderProgram3.projectionLocation, false, projectionMatrix);
+        gl.useProgram(shaderProgram3.program);
+        gl.uniformMatrix4fv(shaderProgram3.projectionLocation, false, projectionMatrix);
+        gl.uniform1f(shaderProgram3.massLocation, this.mass);
+        gl.uniform1f(shaderProgram3.lifeTimeLocation, this.maxLifeTime);
 
         var tempSceneMat = []
         mat4.copy(tempSceneMat, sceneMatrix);
@@ -474,29 +493,35 @@ function Emitter(emitterPos, maxNumPart, mass, direction) {
         mat4.scale(tempSceneMat, tempSceneMat, [0.1, 0.1, 0.1]);
         shaderProgram3.setupModelView(viewMatrix, tempSceneMat);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
-        gl.vertexAttribPointer(shaderProgram3.positionLocation, 3, gl.FLOAT, false, 0, 0);
-        ext.vertexAttribDivisorANGLE(shaderProgram3.positionLocation, 0);
-        //enable this vertex attribute
-        gl.enableVertexAttribArray(shaderProgram3.positionLocation);
+        setArrayBufferFloat(this.quadBuffer, shaderProgram3.positionLoc, 3);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
-        gl.enableVertexAttribArray(shaderProgram3.centerLocation);
-        gl.vertexAttribPointer(shaderProgram3.centerLocation, 4, gl.FLOAT, false, 0, 0);
-        ext.vertexAttribDivisorANGLE(shaderProgram3.centerLocation, 1);
+        setArrayBufferFloatInstanced(this.posBuffer, shaderProgram3.centerLocation, 4, 1);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-        gl.vertexAttribPointer(shaderProgram3.colorLocation, 4, gl.FLOAT, false, 0, 0);
-        ext.vertexAttribDivisorANGLE(shaderProgram3.colorLocation, 0);
-        gl.enableVertexAttribArray(shaderProgram3.colorLocation);
+        setArrayBufferFloatInstanced(this.colorBuffer, shaderProgram3.colorLocation, 4, 0);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.timeBuffer);
-        gl.vertexAttribPointer(shaderProgram3.timeLocation, 1, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(shaderProgram3.timeLocation);
-        ext.vertexAttribDivisorANGLE(shaderProgram3.timeLocation, 1);
+        setArrayBufferFloatInstanced(this.timeBuffer, shaderProgram3.timeLocation, 1, 1);
 
+        setArrayBufferFloatInstanced(this.offsetBuffer, shaderProgram3.offsetLocation, 3, 1);
         // draw the bound data as 6 vertices = 2 triangles starting at index 0
-        ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, this.numPart);
-        ext.vertexAttribDivisorANGLE(shaderProgram3.colorLocation, 0); // gotta do this --> SUPERSTRANGE
+        ext.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP, 0, 4, this.maxNumPart);
     }
+}
+
+
+function setArrayBufferFloat(buffer, bufferLoc, numElems) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.vertexAttribPointer(bufferLoc, numElems, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(bufferLoc);
+}
+
+function setArrayBufferFloatInstanced(buffer, bufferLoc, numElems, numInstances) {
+    setArrayBufferFloat(buffer, bufferLoc, numElems);
+    ext.vertexAttribDivisorANGLE(bufferLoc, numInstances);
+}
+
+function setupStaticArrayBuffer(bufferData) {
+    var buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, bufferData, gl.STATIC_DRAW);
+    return buffer;
 }
