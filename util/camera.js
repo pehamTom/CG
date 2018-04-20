@@ -1,6 +1,7 @@
+//object bundling all data and operation needed for camera animation
 var camera = {
     pos:[-10, 0, 0],
-    front:[10, 0, 0],
+    direction:[10, 0, 0],
     up:[0, 1, 0],
     pitch:null,
     yaw:null,
@@ -17,18 +18,18 @@ var camera = {
         var sensitivity = 0.005;
         //translation
         if(this.movingForward) {
-            vec3.add(this.pos, this.pos, vec3.scale([], this.front, timer.delta*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale([], this.direction, timer.delta*sensitivity));
         } else if(this.movingBackward) {
-            vec3.add(this.pos, this.pos, vec3.scale([], this.front, -timer.delta*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale([], this.direction, -timer.delta*sensitivity));
         }
 
         if(this.movingLeft) {
-            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.up, this.front), timer.delta*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.up, this.direction), timer.delta*sensitivity));
         } else if(this.movingRight) {
-            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.front, this.up), timer.delta*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.direction, this.up), timer.delta*sensitivity));
         }
 
-        //rotation
+        //rotation using euler angles
         this.yaw += timer.delta*this.deltaX*sensitivity/10.0;
         this.pitch -= timer.delta*this.deltaY*sensitivity/10.0;
         var limit = glMatrix.toRadian(89.0);
@@ -37,14 +38,14 @@ var camera = {
         if(this.pitch < -limit)
             this.pitch = -limit;
 
-        this.front[0] = Math.cos(this.pitch) * Math.cos(this.yaw);
-        this.front[1] = Math.sin(this.pitch);
-        this.front[2] = Math.cos(this.pitch) * Math.sin(this.yaw);
-        vec3.normalize(this.front, this.front);
+        this.direction[0] = Math.cos(this.pitch) * Math.cos(this.yaw);
+        this.direction[1] = Math.sin(this.pitch);
+        this.direction[2] = Math.cos(this.pitch) * Math.sin(this.yaw);
+        vec3.normalize(this.direction, this.direction);
         this.deltaX = 0;
         this.deltaY = 0;
     },
-	lookAt: function(point) {
+	lookAt: function(point) { //set camera to look at point
 		this.deltaX = 0;
 		this.deltaY = 0;	//don't rotate because of mouse movement
         var direction = vec3.subtract([], point, this.pos);
@@ -63,6 +64,7 @@ var camera = {
     reset: function() {
         this.pos = [-10, 0, 0];
         this.up = [0, 1, 0];
-        this.lookAt(vec3.negate(this.front, this.pos));
+        this.fov = glMatrix.toRadian(30)
+        this.lookAt(vec3.negate(this.direction, this.pos));
     }
 };

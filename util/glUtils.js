@@ -26,3 +26,22 @@ function setDynamicArrayBufferData(buffer, data) {
 	gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 	gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
 }
+
+//shader class
+function ShaderProgram(vs, fs) {
+    this.program = createProgram(gl, vs, fs);
+
+    this.modelViewLoc = gl.getUniformLocation(this.program, 'u_modelView');
+    this.projectionLocation = gl.getUniformLocation(this.program, 'u_projection');
+    this.positionLocation = gl.getAttribLocation(this.program, "a_position");
+
+    this.setProjectionMat = function(projectionMatrix) {
+        gl.uniformMatrix4fv(this.projectionLocation, false, projectionMatrix);
+    };
+
+    this.setupModelView = function(viewMatrix, sceneMatrix) {
+        var modelViewMatrix = [];
+        mat4.mul(modelViewMatrix, viewMatrix, sceneMatrix);
+        gl.uniformMatrix4fv(this.modelViewLoc, false, modelViewMatrix);
+    }
+}

@@ -1,6 +1,7 @@
 //the OpenGL context
 var gl = null;
-//our shader program
+
+//shaders
 var shaderProgram1 = null;
 var shaderProgram2 = null;
 var shaderProgram3 = null;
@@ -12,26 +13,9 @@ var aspectRatio = canvasWidth / canvasHeight;
 var ext;
 //camera and projection settings
 
-var timer = {elapsed: 0, delta:0, offSet:0, prev:0, absolute:0,
-            reset: function() {
-                this.offSet = this.absolute;
-                this.elapsed = 0;
-                this.delta = 0;
-            },
-            advance: function(timeInMilliseconds) {
-                if(isNaN(timeInMilliseconds)) return;
-                this.absolute = timeInMilliseconds;
-                this.prev = this.elapsed;
-                this.elapsed = timeInMilliseconds - this.offSet;
-                this.delta = this.elapsed - this.prev;
-            }
-}
 
 var cubeVertexBuffer, cubeColorBuffer, cubeIndexBuffer;
-var houseVertexBuffer, houseIndexBuffer;
-
-var maxPart = 100;
-var particlesCount = 1;
+var houseVertexBuffer, houseIndexBuffer; //TEST
 
 var s = 0.3; //size of cube
 var cubeVertices = new Float32Array([
@@ -61,9 +45,12 @@ var cubeIndices =  new Float32Array([
    20,21,22, 20,22,23
 ]);
 
-var house;
+var house; //TEST
+
+//TEST
 var testEmitter1;
 var testEmitter2;
+
 //handle mouse input
 document.addEventListener("mousemove", function(event){
     if(! event.shiftKey) return;
@@ -71,6 +58,7 @@ document.addEventListener("mousemove", function(event){
     camera.deltaY = event.movementY;
 });
 
+//handle keyboard input
 document.addEventListener("keypress", function(event) {
     switch(event.key) {
         case "W":
@@ -144,7 +132,7 @@ function init(resources) {
     shaderProgram2 = new ShaderProgram(resources.vs2, resources.fs);
     shaderProgram3 = new ShaderProgram(resources.vs3, resources.fs2);
 
-    //same for color
+    //set attributes and uniforms that aren't shared by shaders
     shaderProgram1.colorLocation = gl.getAttribLocation(shaderProgram1.program, "a_color");
 
     shaderProgram3.colorLocation = gl.getUniformLocation(shaderProgram3.program, "u_color");
@@ -159,14 +147,13 @@ function init(resources) {
     initCubeBuffer();
     house = resources.house;
     initHouseBuffer();
+
+    //TEST
     testEmitter1= new PlaneEmitter([3,0,0], 3000, 1000, 00, [0.0,1.3,0], 0.020,
         0.01, [1,0,0,1], [0.9, 0.7, 0.3, 1], [0.5,0,0], [0,0,0.3]);
     testEmitter2 = new SphereEmitter([0,0,0], 5000, 4000, 0.10, [0,4,0], 0.070,
         0.01, [0.3,0.3,0.3,1], [1, 1, 1, 1], 0.5);
 
-
-        // emitterPos, partsPerSec, maxLifeTime, mass, direction,
-        // 	particleSize, fuzziness, startColor, finalColor, planeX, planeZ) {
 }
 
 function initCubeBuffer() {
@@ -183,13 +170,13 @@ function initCubeBuffer() {
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIndexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeIndices), gl.STATIC_DRAW);
 }
+
 /**
  * render one frame
  */
 function render(timeInMilliseconds) {
 
     timer.advance(timeInMilliseconds);
-
     //set background color to light gray
     gl.clearColor(0.2, 0.2, 0.2, 1.0);
     //clear the buffer
@@ -197,31 +184,29 @@ function render(timeInMilliseconds) {
     //enable depth test to let objects in front occluse objects further away
     gl.enable(gl.DEPTH_TEST);
 
-    //checkForWindowResize(gl);
-    //aspectRatio = gl.canvasWidth / gl.canvasHeight;
-
-    //activate this shader program
-    gl.useProgram(shaderProgram1.program);
-
+    //base matrices to be applied to all objects
     var projectionMatrix = [];
     var sceneMatrix = [];
     var viewMatrix = [];
     mat4.identity(sceneMatrix);
-    mat4.lookAt(viewMatrix, camera.pos, vec3.add([], camera.pos, camera.front), camera.up);
+    mat4.lookAt(viewMatrix, camera.pos, vec3.add([], camera.pos, camera.direction), camera.up);
     mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 1, 1000);
-    camera.update();
 
+    //update
+    camera.update();
     testEmitter1.update();
     testEmitter2.update();
+
+    //render
     testEmitter1.render(viewMatrix, sceneMatrix, projectionMatrix);
     testEmitter2.render(viewMatrix, sceneMatrix, projectionMatrix);
+
     gl.useProgram(shaderProgram2.program);
     shaderProgram2.setProjectionMat(projectionMatrix);
     renderHouse(mat4.identity([]), viewMatrix);
 
     gl.useProgram(shaderProgram1.program);
     shaderProgram1.setProjectionMat(projectionMatrix);
-    // TASK 8-2
     renderRobot(sceneMatrix, viewMatrix);
 
     camera.animatedAngle = timer.elapsed/1000;
@@ -234,8 +219,6 @@ function renderCube() {
   gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0); //LINE_STRIP
 }
 
-var trans = 0;
-var particlesCount = 1;
 function renderRobot(sceneMatrix, viewMatrix) {
 
   gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexBuffer);
@@ -277,7 +260,7 @@ function renderRobot(sceneMatrix, viewMatrix) {
 }
 
 
-//load the shader resources using a utility function
+//load resources like shader and obj files
 loadResources({
   vs1: 'shader/simple.vs.glsl',
   fs: 'shader/simple.fs.glsl',
@@ -292,12 +275,7 @@ loadResources({
   render();
 });
 
-function setUpModelViewMatrix(viewMatrix, sceneMatrix, modelViewLoc) {
-  var modelViewMatrix = [];
-  mat4.mul(modelViewMatrix, viewMatrix, sceneMatrix);
-  gl.uniformMatrix4fv(modelViewLoc, false, modelViewMatrix);
-}
-
+//TEST
 function initHouseBuffer() {
     houseVertexBuffer = gl.createBuffer();
     houseVert = new Float32Array(house.position);
@@ -309,6 +287,7 @@ function initHouseBuffer() {
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(house.index), gl.STATIC_DRAW);
 }
 
+//TEST
 function renderHouse(viewMatrix, originSceneMatrix) {
     var tempSceneMat = mat4.translate([], originSceneMatrix, [0, 2, 0]);
     tempSceneMat = mat4.scale(tempSceneMat, tempSceneMat, [0.2, 0.2, 0.2]);
@@ -321,26 +300,10 @@ function renderHouse(viewMatrix, originSceneMatrix) {
     gl.drawElements(gl.TRIANGLES, house.index.length, gl.UNSIGNED_SHORT, 0);
 }
 
-//create shader with uniforms for modelview and projection and attribute for vertexposition
-function ShaderProgram(vs, fs) {
-    this.program = createProgram(gl, vs, fs);
-
-    this.modelViewLoc = gl.getUniformLocation(this.program, 'u_modelView');
-    this.projectionLocation = gl.getUniformLocation(this.program, 'u_projection');
-    this.positionLocation = gl.getAttribLocation(this.program, "a_position");
-
-    this.setProjectionMat = function(projectionMatrix) {
-        gl.uniformMatrix4fv(this.projectionLocation, false, projectionMatrix);
-    };
-
-    this.setupModelView = function(viewMatrix, sceneMatrix) {
-        var modelViewMatrix = [];
-        mat4.mul(modelViewMatrix, viewMatrix, sceneMatrix);
-        gl.uniformMatrix4fv(this.modelViewLoc, false, modelViewMatrix);
-    }
-}
-
+//reset all state
 function reset() {
     timer.reset();
     camera.reset();
+    testEmitter1.reset();
+    testEmitter2.reset();
 }
