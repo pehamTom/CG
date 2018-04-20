@@ -11,63 +11,6 @@ var aspectRatio = canvasWidth / canvasHeight;
 
 var ext;
 //camera and projection settings
-var camera = {pos:[-10, 0, 0], front:[10, 0, 0], up:[0, 1, 0], pitch:null, yaw:null,
-    cameraSpeed: 0.05, movingForward:false, movingBackward:false,
-    movingLeft:false, movingRight:false, deltaX:0, deltaY:0,
-    animatedAngle:0, fov:glMatrix.toRadian(30),
-    update: function(){
-        var sensitivity = 0.005;
-        //translation
-        if(this.movingForward) {
-            vec3.add(this.pos, this.pos, vec3.scale([], this.front, timer.delta*sensitivity));
-        } else if(this.movingBackward) {
-            vec3.add(this.pos, this.pos, vec3.scale([], this.front, -timer.delta*sensitivity));
-        }
-
-        if(this.movingLeft) {
-            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.up, this.front), timer.delta*sensitivity));
-        } else if(this.movingRight) {
-            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.front, this.up), timer.delta*sensitivity));
-        }
-
-        //rotation
-        this.yaw += timer.delta*this.deltaX*sensitivity/10.0;
-        this.pitch -= timer.delta*this.deltaY*sensitivity/10.0;
-        var limit = glMatrix.toRadian(89.0);
-        if(this.pitch > limit)
-            this.pitch =  limit;
-        if(this.pitch < -limit)
-            this.pitch = -limit;
-
-        this.front[0] = Math.cos(this.pitch) * Math.cos(this.yaw);
-        this.front[1] = Math.sin(this.pitch);
-        this.front[2] = Math.cos(this.pitch) * Math.sin(this.yaw);
-        vec3.normalize(this.front, this.front);
-        this.deltaX = 0;
-        this.deltaY = 0;
-    },
-	lookAt: function(point) {
-		this.deltaX = 0;
-		this.deltaY = 0;	//don't rotate because of mouse movement
-        var direction = vec3.subtract([], point, this.pos);
-		vec3.normalize(direction, direction);
-		this.pitch = Math.asin(direction[1]);
-		this.yaw = Math.atan2(direction[2], direction[0]);
-	},
-    zoom: function(offSet) {
-        this.fov += offSet*0.01;
-        if(this.fov < glMatrix.toRadian(1)) {
-            this.fov = glMatrix.toRadian(1);
-        } else if(this.fov > glMatrix.toRadian(70)) {
-            this.fov = glMatrix.toRadian(70);
-        }
-    },
-    reset: function() {
-        this.pos = [-10, 0, 0];
-        this.up = [0, 1, 0];
-        this.lookAt(vec3.negate(this.front, this.pos));
-    }
-};
 
 var timer = {elapsed: 0, delta:0, offSet:0, prev:0, absolute:0,
             reset: function() {
@@ -119,7 +62,8 @@ var cubeIndices =  new Float32Array([
 ]);
 
 var house;
-var testEmitter;
+var testEmitter1;
+var testEmitter2;
 //handle mouse input
 document.addEventListener("mousemove", function(event){
     if(! event.shiftKey) return;
@@ -207,18 +151,23 @@ function init(resources) {
     shaderProgram3.centerLocation = gl.getAttribLocation(shaderProgram3.program, "a_centerPos");
     shaderProgram3.timeLocation = gl.getAttribLocation(shaderProgram3.program, "a_time");
     shaderProgram3.generalDirLocation = gl.getUniformLocation(shaderProgram3.program, "u_generalDirection");
-    shaderProgram3.lifeTimeLocation = gl.getUniformLocation(shaderProgram3.program, "u_lifeTime");
     shaderProgram3.massLocation = gl.getUniformLocation(shaderProgram3.program, "u_mass");
-    shaderProgram3.offsetLocation = gl.getAttribLocation(shaderProgram3.program, "a_offset");
-    shaderProgram3.initVelLocation = gl.getAttribLocation(shaderProgram3.program, "a_initVel");
+    shaderProgram3.velocityLocation = gl.getAttribLocation(shaderProgram3.program, "a_velocity");
     shaderProgram3.finalColorLocation = gl.getUniformLocation(shaderProgram3.program, "u_finalColor");
+    shaderProgram3.lifeTimeLocation = gl.getAttribLocation(shaderProgram3.program, "a_lifeTime");
 
     initCubeBuffer();
     house = resources.house;
     initHouseBuffer();
-    testEmitter = new Emitter([0,1,0], [0.3,0,0], [0,0,0.3], 30000, 3000, 7000, 0.0, [0.1,0.1,0.1], 0.01);
-}
+    testEmitter1= new PlaneEmitter([3,0,0], 3000, 1000, 00, [0.0,1.3,0], 0.020,
+        0.01, [1,0,0,1], [0.9, 0.7, 0.3, 1], [0.5,0,0], [0,0,0.3]);
+    testEmitter2 = new SphereEmitter([0,0,0], 5000, 2000, 0.10, [0,3,0], 0.050,
+        0.01, [0.3,0.3,0.3,1], [1, 1, 1, 1], 0.5);
 
+
+        // emitterPos, partsPerSec, maxLifeTime, mass, direction,
+        // 	particleSize, fuzziness, startColor, finalColor, planeX, planeZ) {
+}
 
 function initCubeBuffer() {
 
@@ -262,8 +211,10 @@ function render(timeInMilliseconds) {
     mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 1, 1000);
     camera.update();
 
-    testEmitter.update();
-    testEmitter.render(viewMatrix, sceneMatrix, projectionMatrix);
+    testEmitter1.update();
+    testEmitter2.update();
+    testEmitter1.render(viewMatrix, sceneMatrix, projectionMatrix);
+    testEmitter2.render(viewMatrix, sceneMatrix, projectionMatrix);
     gl.useProgram(shaderProgram2.program);
     shaderProgram2.setProjectionMat(projectionMatrix);
     renderHouse(mat4.identity([]), viewMatrix);
@@ -392,129 +343,4 @@ function ShaderProgram(vs, fs) {
 function reset() {
     timer.reset();
     camera.reset();
-}
-
-function Emitter(emitterPos, planeX, planeZ, maxNumPart, partsPerSec, maxLifeTime, mass, direction, particleSize) {
-    this.quadVertices = new Float32Array([
-      -1.0*particleSize, -1.0*particleSize, 0.0,
-      1.0*particleSize, -1.0*particleSize, 0.0,
-      -1.0*particleSize, 1.0*particleSize, 0.0,
-      1.0*particleSize, 1.0*particleSize, 0.0]);
-
-    this.quadColors = new Float32Array([
-      0.9, 0, 0, 1]);
-
-    this.finalColors = new Float32Array([
-        1,1,0.4,1
-    ]);
-
-    this.emitterPos = emitterPos;
-    this.maxNumPart = maxNumPart;
-    this.mass = mass;
-    this.numPart = 0;
-    this.maxLifeTime = maxLifeTime;
-    this.direction = direction;
-    this.lastusedParticle = 0;
-    this.partsPerSec = partsPerSec;
-    this.offset = new Float32Array(maxNumPart*3);
-    this.pos = new Float32Array(maxNumPart*3);
-    this.time = new Float32Array(maxNumPart);
-    this.planeX = planeX;
-    this.planeZ = planeZ;
-    this.startBuffer = 0;
-
-    this.quadBuffer = setupStaticArrayBuffer(this.quadVertices);
-    this.offsetBuffer = gl.createBuffer();
-    this.timeBuffer = gl.createBuffer();
-    this.posBuffer = gl.createBuffer();
-
-    this.update = function() {
-        var partsToSpawn = this.partsPerSec*timer.delta/1000;
-        for(i = 0; i < partsToSpawn; i++) {
-            var j = this.lastusedParticle;
-            this.time[j] = this.maxLifeTime;
-            var rand1 = Math.random();
-            var rand2 = Math.random();
-            var rand3 = Math.random();
-            var planeOffset = [];
-            vec3.add(planeOffset, this.emitterPos,
-                vec3.add([], vec3.scale([], this.planeX,(rand1*2-1)),
-                vec3.scale([], this.planeZ, (rand2*2-1))));
-
-            this.pos[j*3] = 0;
-            this.pos[j*3+1] = 0;
-            this.pos[j*3+2] = 0;
-            this.offset[j*3] = planeOffset[0];
-            this.offset[j*3+1] = this.emitterPos[1]+(rand3*2-1);
-            this.offset[j*3+2] = planeOffset[2];
-            this.lastusedParticle = (this.lastusedParticle+1)%this.maxNumPart;
-        }
-        for(i = 0; i < this.maxNumPart; i++) {
-            this.time[i] -= timer.delta;
-            if(this.time[i] > 0) {
-                var rand1 = Math.random();
-                var rand2 = Math.random();
-                var rand3 = Math.random();
-                this.pos[i*3] = 3*Math.sin(this.time[i]/1000)+(rand1*2-1)/30;
-                this.pos[i*3+1] = 3*Math.cos(this.time[i]/1000)+(rand2*2-1)/30;
-                this.pos[i*3+2] = 0;
-            }
-        }
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.timeBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.time), gl.DYNAMIC_DRAW);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this.pos, gl.DYNAMIC_DRAW);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.offsetBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this.offset, gl.DYNAMIC_DRAW);
-
-    };
-
-    this.render = function(viewMatrix, sceneMatrix, projectionMatrix) {
-        // this.numPart = 10;
-        gl.useProgram(shaderProgram3.program);
-        gl.uniformMatrix4fv(shaderProgram3.projectionLocation, false, projectionMatrix);
-        gl.uniform1f(shaderProgram3.massLocation, this.mass);
-        gl.uniform1f(shaderProgram3.lifeTimeLocation, this.maxLifeTime);
-        gl.uniform4fv(shaderProgram3.colorLocation, this.quadColors);
-        gl.uniform4fv(shaderProgram3.finalColorLocation, this.finalColors);
-        gl.uniform3fv(shaderProgram3.generalDirLocation, this.direction);
-
-        var normal = vec3.cross([], planeX, planeZ);
-        var tempSceneMat = []
-        mat4.copy(tempSceneMat, sceneMatrix);
-        // //TASK 2-2 and TASK 3 and TASK 4
-        mat4.rotate(tempSceneMat, tempSceneMat, glMatrix.toRadian(90), [0, 1, 0]);
-        shaderProgram3.setupModelView(viewMatrix, tempSceneMat);
-
-        setArrayBufferFloat(this.quadBuffer, shaderProgram3.positionLoc, 3);
-
-        setArrayBufferFloatInstanced(this.posBuffer, shaderProgram3.centerLocation, 3, 1);
-
-        setArrayBufferFloatInstanced(this.timeBuffer, shaderProgram3.timeLocation, 1, 1);
-
-        setArrayBufferFloatInstanced(this.offsetBuffer, shaderProgram3.offsetLocation, 3, 1);
-        // draw the bound data as 6 vertices = 2 triangles starting at index 0
-        ext.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP, 0, 4, this.maxNumPart);
-    }
-}
-
-
-function setArrayBufferFloat(buffer, bufferLoc, numElems) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.vertexAttribPointer(bufferLoc, numElems, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(bufferLoc);
-}
-
-function setArrayBufferFloatInstanced(buffer, bufferLoc, numElems, numInstances) {
-    setArrayBufferFloat(buffer, bufferLoc, numElems);
-    ext.vertexAttribDivisorANGLE(bufferLoc, numInstances);
-}
-
-function setupStaticArrayBuffer(bufferData) {
-    var buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, bufferData, gl.STATIC_DRAW);
-    return buffer;
 }

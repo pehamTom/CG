@@ -2,7 +2,6 @@
  * Created by Samuel Gratzl on 08.02.2016.
  */
 'use strict';
-
 /**
  * load resources identified by a key: url store returning a promise when everything is loaded
  * @param resources the resources to load

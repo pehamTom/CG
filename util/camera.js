@@ -1,15 +1,36 @@
-exports.camera;
+var camera = {
+    pos:[-10, 0, 0],
+    front:[10, 0, 0],
+    up:[0, 1, 0],
+    pitch:null,
+    yaw:null,
+    cameraSpeed: 0.05,
+    movingForward:false,
+    movingBackward:false,
+    movingLeft:false,
+    movingRight:false,
+    deltaX:0,
+    deltaY:0,
+    animatedAngle:0,
+    fov:glMatrix.toRadian(30),
+    update: function(){
+        var sensitivity = 0.005;
+        //translation
+        if(this.movingForward) {
+            vec3.add(this.pos, this.pos, vec3.scale([], this.front, timer.delta*sensitivity));
+        } else if(this.movingBackward) {
+            vec3.add(this.pos, this.pos, vec3.scale([], this.front, -timer.delta*sensitivity));
+        }
 
-var camera = {pos:[0, 0, 0], front:[0, 0, 0], up:[0, 1, 0], pitch:0, yaw:0,
-    cameraSpeed: 0.05, movementX:[0, 0, 0], movementY:[0,0,0], deltaX:0, deltaY:0,
-    update: function(timeElapsed){
-        var sensitivity = 0.00005;
-        vec3.add(this.pos, this.pos, vec3.scale([], this.movementX, timeElapsed*sensitivity));
-        vec3.add(this.pos, this.pos, vec3.scale([], this.movementY, timeElapsed*sensitivity));
+        if(this.movingLeft) {
+            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.up, this.front), timer.delta*sensitivity));
+        } else if(this.movingRight) {
+            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.front, this.up), timer.delta*sensitivity));
+        }
 
         //rotation
-        this.yaw += this.deltaX*sensitivity*1000;
-        this.pitch -= this.deltaY*sensitivity*1000;
+        this.yaw += timer.delta*this.deltaX*sensitivity/10.0;
+        this.pitch -= timer.delta*this.deltaY*sensitivity/10.0;
         var limit = glMatrix.toRadian(89.0);
         if(this.pitch > limit)
             this.pitch =  limit;
@@ -20,17 +41,28 @@ var camera = {pos:[0, 0, 0], front:[0, 0, 0], up:[0, 1, 0], pitch:0, yaw:0,
         this.front[1] = Math.sin(this.pitch);
         this.front[2] = Math.cos(this.pitch) * Math.sin(this.yaw);
         vec3.normalize(this.front, this.front);
-        var test = vec3.add([], this.pos, vec3.scale([], this.front, vec3.length(this.pos)));
-        console.log(this.pos[0]+ " " + this.pos[1] + " " + this.pos[2]);
         this.deltaX = 0;
         this.deltaY = 0;
     },
-	lookAt: function(direction) {
+	lookAt: function(point) {
 		this.deltaX = 0;
 		this.deltaY = 0;	//don't rotate because of mouse movement
-		vec3.negate(this.front, this.pos);
-		direction = vec3.normalize([], direction);
-		this.pitch = Math.asin(direction[0]);
+        var direction = vec3.subtract([], point, this.pos);
+		vec3.normalize(direction, direction);
+		this.pitch = Math.asin(direction[1]);
 		this.yaw = Math.atan2(direction[2], direction[0]);
-	}
+	},
+    zoom: function(offSet) {
+        this.fov += offSet*0.01;
+        if(this.fov < glMatrix.toRadian(1)) {
+            this.fov = glMatrix.toRadian(1);
+        } else if(this.fov > glMatrix.toRadian(70)) {
+            this.fov = glMatrix.toRadian(70);
+        }
+    },
+    reset: function() {
+        this.pos = [-10, 0, 0];
+        this.up = [0, 1, 0];
+        this.lookAt(vec3.negate(this.front, this.pos));
+    }
 };
