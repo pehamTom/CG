@@ -29,8 +29,5 @@ void main() {
     * vec4((a_position+temp+a_centerPos), 1);
 
   vec4 interPolatedColor = mix(u_color, u_finalColor, time/(a_lifeTime/1000.0));
-  if(a_time >= 0.0)
-    v_color = interPolatedColor;
-  else
-    v_color = vec4(interPolatedColor.xyz, 0.0);
+  v_color = interPolatedColor;
 }

@@ -149,10 +149,10 @@ function init(resources) {
     initHouseBuffer();
 
     //TEST
-    testEmitter1= new PlaneEmitter([3,0,0], 3000, 1000, 00, [0.0,1.3,0], 0.020,
+    testEmitter1= new PlaneEmitter([3,0,0], 3000, 1000, 0, [0.0,1.3,0], 0.020,
         0.01, [1,0,0,1], [0.9, 0.7, 0.3, 1], [0.5,0,0], [0,0,0.3]);
-    testEmitter2 = new SphereEmitter([0,0,0], 5000, 4000, 0.10, [0,4,0], 0.070,
-        0.01, [0.3,0.3,0.3,1], [1, 1, 1, 1], 0.5);
+    testEmitter2 = new SphereEmitter([0,0,0], 5000, 100, 0, [0,0,0], 0.01,
+        0.0, [0.3,0.3,0.3,1], [1, 1, 1, 1], 1);
 
 }
 

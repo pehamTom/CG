@@ -214,16 +214,15 @@ function SphereEmitter(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
 		var x = (Math.random()*2-1);
 		var y = (Math.random()*2-1);
 		var z = (Math.random()*2-1);
-		var normalizer = Math.sqrt(x*x+y*y+z*z);
-		x *= this.radius;
-		y *= this.radius;
-		z *= this.radius;
+		var normalizer = 1/Math.sqrt(x*x+y*y+z*z);
+		x *= normalizer*this.radius;
+		y *= normalizer*this.radius;
+		z *= normalizer*this.radius;
 
 		particle.pos = vec3.add([], this.emitterPos, [x,y,z]); //offset by center of sphere
-		particle.lifeTime = this.maxLifeTime*Math.random(); //randomize particle lifetime
+		particle.lifeTime = this.maxLifeTime; //TODO: randomize
 		particle.time = particle.lifeTime;
 		particle.velocity = vec3.normalize([], vec3.sub([], [x,y,z], this.emitterPos));
-
 	};
 
 	this.updateParticle = function(particle){
@@ -232,9 +231,9 @@ function SphereEmitter(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
 		this.positions[i*3] = particle.pos[0];
 		this.positions[i*3+1] = particle.pos[1];
 		this.positions[i*3+2] = particle.pos[2];
-		this.velocities[i*3] = particle.velocity[0];
-		this.velocities[i*3+1] = particle.velocity[1];
-		this.velocities[i*3+2] = particle.velocity[2];
+		this.velocities[i*3] = 0;//particle.velocity[0];
+		this.velocities[i*3+1] = 0;//particle.velocity[1];
+		this.velocities[i*3+2] = 0;//particle.velocity[2];
 		this.partTimes[i] = particle.time;
 		this.lifeTimes[i] = particle.lifeTime;
 	}
