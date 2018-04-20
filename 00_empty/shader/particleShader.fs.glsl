@@ -11,6 +11,6 @@ varying vec4 v_color;
 
 //entry point again
 void main() {
-  if(v_color.w <= 0.0) discard; 
+  if(v_color.w <= 0.0) discard;
   gl_FragColor = v_color;
 }
