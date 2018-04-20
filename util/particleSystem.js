@@ -165,13 +165,16 @@ function SphereEmitter(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
 	this.radius = radius;
 
 	this.createParticle = function(particle) {
-		var x = (Math.random()*2-1)*radius;
-		var y = (Math.random()*2-1)*radius;
-		var rand = Math.random();
-		var sign = rand < 0.5 ? -1 : 1;
-		var z = Math.sqrt(radius-x*x-y*y)*sign;
-		particle.pos = [x,y,z];
-		particle.lifeTime = this.maxLifeTime;
+		var x = (Math.random()*2-1);
+		var y = (Math.random()*2-1);
+		var z = (Math.random()*2-1);
+		var normalizer = Math.sqrt(x*x+y*y+z*z);
+		x *= this.radius;
+		y *= this.radius;
+		z *= this.radius;
+
+		particle.pos = vec3.add([], this.emitterPos, [x,y,z]);
+		particle.lifeTime = this.maxLifeTime*Math.random();
 		particle.time = particle.lifeTime;
 		particle.velocity = vec3.normalize([], vec3.sub([], [x,y,z], this.emitterPos));
 
@@ -179,6 +182,7 @@ function SphereEmitter(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
 
 	this.updateParticle = function(particle){
 		var i = this.numParticles;
+		particle.velocity[0] += (Math.random()*2-1)*this.fuzziness
 		this.positions[i*3] = particle.pos[0];
 		this.positions[i*3+1] = particle.pos[1];
 		this.positions[i*3+2] = particle.pos[2];
