@@ -19,56 +19,60 @@ Classes that inherit from this must implement the functions:
  	-add alpha blending (particles probably need to be sorted)
 	-add textures
 	-OPTIONAL: encode data in texture instead of individual buffers
+	-add billboarding
 **/
-function Emitter(emitterPos, partsPerSec, maxLifeTime, mass, direction,
+class Emitter {
+
+	constructor(emitterPos, partsPerSec, maxLifeTime, mass, direction,
 	particleSize, fuzziness, startColor, finalColor) {
 
-    this.quadVertices = new Float32Array([
-      -1.0*particleSize, -1.0*particleSize, 0.0,
-      1.0*particleSize, -1.0*particleSize, 0.0,
-      -1.0*particleSize, 1.0*particleSize, 0.0,
-      1.0*particleSize, 1.0*particleSize, 0.0]);
+	    this.quadVertices = new Float32Array([
+	      -0.5*particleSize, -0.5*particleSize, 0.0,
+	      0.5*particleSize, -0.5*particleSize, 0.0,
+	      -0.5*particleSize, 0.5*particleSize, 0.0,
+	      0.5*particleSize, 0.5*particleSize, 0.0]);
 
-	//set max size of the particlebuffer
-    this.maxNumPart = partsPerSec*maxLifeTime/1000;
+		//set max size of the particlebuffer
+	    this.maxNumPart = partsPerSec*maxLifeTime/1000;
 
-	this.emitterPos = emitterPos;
-    this.partsPerSec = partsPerSec;
-	this.maxLifeTime = maxLifeTime;
-	this.mass = mass;
-	this.direction = direction;
-	this.fuzziness = fuzziness;
-	this.quadColors = startColor;
-	this.finalColors = finalColor;
+		this.emitterPos = emitterPos;
+	    this.partsPerSec = partsPerSec;
+		this.maxLifeTime = maxLifeTime;
+		this.mass = mass;
+		this.direction = direction;
+		this.fuzziness = fuzziness;
+		this.quadColors = startColor;
+		this.finalColors = finalColor;
 
-	//local buffers
-    this.positions = [];
-    this.partTimes = [];
-	this.velocities = [];
-	this.lifeTimes = [];
-	this.particleBuffer = [];
+		//local buffers
+	    this.positions = [];
+	    this.partTimes = [];
+		this.velocities = [];
+		this.lifeTimes = [];
+		this.particleBuffer = [];
 
-	//local state variables
-    this.numPart = 0;
-	this.lastusedParticle = 0;
+		//local state variables
+	    this.numPart = 0;
+		this.lastusedParticle = 0;
 
 
-	for(i = 0; i < this.maxNumPart; i++) this.particleBuffer[i] = new Particle(0, [0,0,0], [0,0,0], -1, 0);
+		for(var i = 0; i < this.maxNumPart; i++) this.particleBuffer[i] = new Particle(0, [0,0,0], [0,0,0], -1, 0);
 
-	//gpu buffers
-    this.quadBuffer = setupStaticArrayBuffer(this.quadVertices);
-    this.timesBuffer = gl.createBuffer();
-    this.posbuffer = gl.createBuffer();
-	this.velocitiesBuffer = gl.createBuffer();
-	this.lifeTimesBuffer = gl.createBuffer();
+		//gpu buffers
+	    this.quadBuffer = setupStaticArrayBuffer(this.quadVertices);
+	    this.timesBuffer = gl.createBuffer();
+	    this.posbuffer = gl.createBuffer();
+		this.velocitiesBuffer = gl.createBuffer();
+		this.lifeTimesBuffer = gl.createBuffer();
+	}
 
-    this.update = function() {
+	update() {
         var partsToSpawn = this.partsPerSec*timer.delta/1000; //particles to spawn this fram
 		var maxParts = this.partsPerSec*0.04;
 		if(partsToSpawn > maxParts) {
 			partsToSpawn = maxParts; //clamp to 25FPS
 		}
-		for(i = 0; i < partsToSpawn; i++) { //cycle through buffer from last known position and spawn new particles
+		for(var i = 0; i < partsToSpawn; i++) { //cycle through buffer from last known position and spawn new particles
 			this.createParticle(this.particleBuffer[this.lastusedParticle]); //use "abstract" create function
             this.lastusedParticle = (this.lastusedParticle+1)%this.maxNumPart;
         }
@@ -94,9 +98,9 @@ function Emitter(emitterPos, partsPerSec, maxLifeTime, mass, direction,
 		setDynamicArrayBufferData(this.posbuffer, new Float32Array(this.positions.slice(0, this.numParticles*3)));
 		setDynamicArrayBufferData(this.velocitiesBuffer, new Float32Array(this.velocities.slice(0, this.numParticles*3)));
 		setDynamicArrayBufferData(this.lifeTimesBuffer, new Float32Array(this.lifeTimes.slice(0, this.numParticles)));
-    };
+    }
 
-    this.render = function(viewMatrix, sceneMatrix, projectionMatrix) {
+    render(viewMatrix, sceneMatrix, projectionMatrix) {
         gl.useProgram(shaderProgram3.program); //shaderProgram3 is the particle shaderprogram
 
 		//set uniforms
@@ -106,9 +110,11 @@ function Emitter(emitterPos, partsPerSec, maxLifeTime, mass, direction,
         gl.uniform4fv(shaderProgram3.finalColorLocation, this.finalColors);
         gl.uniform3fv(shaderProgram3.generalDirLocation, this.direction);
 
+		var camRight = vec3.cross([], camera.direction, camera.up);
+		gl.uniform3fv(shaderProgram3.camRightLocation, camRight);
+
         var tempSceneMat = [];	//don't overwrite parameter scenebuffer
         mat4.copy(tempSceneMat, sceneMatrix);
-        mat4.rotate(tempSceneMat, tempSceneMat, glMatrix.toRadian(90), [0, 1, 0]); //TODO: do billboarding here!
         shaderProgram3.setupModelView(viewMatrix, tempSceneMat);
 
 
@@ -121,22 +127,24 @@ function Emitter(emitterPos, partsPerSec, maxLifeTime, mass, direction,
 		setArrayBufferFloatInstanced(this.lifeTimesBuffer, shaderProgram3.lifeTimeLocation, 1, 1);
 
         ext.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP, 0, 4, this.numParticles);
-    };
+    }
 
-	this.reset = function() {
-		for(i = 0; i < this.maxNumPart; i++) this.particleBuffer[i] = new Particle(0, [0,0,0], [0,0,0], -1, 0);
+	reset(){
+		for(var i = 0; i < this.maxNumPart; i++) this.particleBuffer[i] = new Particle(0, [0,0,0], [0,0,0], -1, 0);
 		this.lastusedParticle = 0;
 	}
 }
 
 //TODO: maybe prototypes are good enough
 //TODO: add normal vectors for billboarding
-function Particle(time, pos, velocity, camDistance, lifeTime) {
-	this.time = time;
-	this.position = pos;
-	this.velocitie = velocity;
-	this.camDistance = camDistance;
-	this.lifeTime = lifeTime;
+class Particle {
+	constructor(time, pos, velocity, camDistance, lifeTime) {
+		this.time = time;
+		this.position = pos;
+		this.velocitie = velocity;
+		this.camDistance = camDistance;
+		this.lifeTime = lifeTime;
+	}
 }
 
 /**
@@ -146,18 +154,19 @@ Emits Particles origining on a plane and sends them towards direction
  	-planeX: local x-coordinate
 	-planeZ: local z-coordinate
 **/
-function PlaneEmitter(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
+class PlaneEmitter extends Emitter {
+	constructor(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
 	direction=[0,0,0], particleSize=0.01, fuzziness=0, startColor, finalColor, planeX=[1,0,0], planeZ=[0,0,1]) {
 
-	Emitter.call(this, emitterPos, partsPerSec, maxLifeTime, mass, direction,
-		particleSize, fuzziness, startColor, finalColor);
+		super(emitterPos, partsPerSec, maxLifeTime, mass, direction,
+			particleSize, fuzziness, startColor, finalColor);
 
-	//local plane coordinate system
-    this.planeX = planeX;
-    this.planeZ = planeZ;
-	this.planeWidth = vec3.length(this.planeX); //just for caching the value
-
-	this.createParticle = function(particle) {
+		//local plane coordinate system
+	    this.planeX = planeX;
+	    this.planeZ = planeZ;
+		this.planeWidth = vec3.length(this.planeX); //just for caching the value
+	}
+	createParticle(particle) {
         var rand1 = Math.random();
         var rand2 = Math.random();
         var rand3 = Math.random();
@@ -174,9 +183,9 @@ function PlaneEmitter(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
 		particle.pos = planePos;
 		particle.velocity = [0,0,0];
 
-	};
+	}
 
-	this.updateParticle = function(particle) {
+	updateParticle(particle) {
 		var i = this.numParticles;
 		var rand1 = Math.random();
 		var rand2 = Math.random();
@@ -201,14 +210,17 @@ Emits Particles on the boundaries of a sphere and sends them uniformly around th
 Additional Parameters:
 	-radius: radius of sphere
 **/
-function SphereEmitter(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
-	direction=[0,0,0], particleSize=0.01, fuzziness=0, startColor, finalColor, radius) {
+class SphereEmitter extends Emitter {
+	constructor(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
+	direction=[0,0,0], particleSize=0.01, fuzziness=0, startColor, finalColor, radius, impulse = 0) {
 
-	Emitter.call(this, emitterPos, partsPerSec, maxLifeTime, mass, direction,
-		particleSize, fuzziness, startColor, finalColor);
-	this.radius = radius;
+		super(emitterPos, partsPerSec, maxLifeTime, mass, direction,
+			particleSize, fuzziness, startColor, finalColor);
+		this.radius = radius;
+		this.impulse = impulse;
+	}
 
-	this.createParticle = function(particle) {
+	createParticle(particle) {
 
 		//create random point on sphere
 		var x = (Math.random()*2-1);
@@ -219,21 +231,21 @@ function SphereEmitter(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
 		y *= normalizer*this.radius;
 		z *= normalizer*this.radius;
 
-		particle.pos = vec3.add([], this.emitterPos, [x,y,z]); //offset by center of sphere
-		particle.lifeTime = this.maxLifeTime; //TODO: randomize
+		particle.pos = vec3.add([], this.emitterPos, [x,y,z]);
+		particle.lifeTime = this.maxLifeTime*(Math.random()*0.2+0.8);
 		particle.time = particle.lifeTime;
-		particle.velocity = vec3.normalize([], vec3.sub([], [x,y,z], this.emitterPos));
-	};
+		particle.velocity = vec3.scale([], vec3.normalize([], vec3.sub([], [x,y,z], this.emitterPos)), this.impulse);
+	}
 
-	this.updateParticle = function(particle){
+	updateParticle(particle){
 		var i = this.numParticles;
-		particle.velocity[0] += (Math.random()*2-1)*this.fuzziness //randomize velocity
+
 		this.positions[i*3] = particle.pos[0];
 		this.positions[i*3+1] = particle.pos[1];
 		this.positions[i*3+2] = particle.pos[2];
-		this.velocities[i*3] = 0;//particle.velocity[0];
-		this.velocities[i*3+1] = 0;//particle.velocity[1];
-		this.velocities[i*3+2] = 0;//particle.velocity[2];
+		this.velocities[i*3] = particle.velocity[0];
+		this.velocities[i*3+1] = particle.velocity[1];
+		this.velocities[i*3+2] = particle.velocity[2];
 		this.partTimes[i] = particle.time;
 		this.lifeTimes[i] = particle.lifeTime;
 	}

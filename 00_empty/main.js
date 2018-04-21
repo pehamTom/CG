@@ -118,6 +118,7 @@ document.addEventListener("wheel", function(event) {
     camera.zoom(event.deltaY);
 })
 
+var scenegraph;
 /**
  * initializes OpenGL context, compile shader, and load buffers
  */
@@ -143,6 +144,7 @@ function init(resources) {
     shaderProgram3.velocityLocation = gl.getAttribLocation(shaderProgram3.program, "a_velocity");
     shaderProgram3.finalColorLocation = gl.getUniformLocation(shaderProgram3.program, "u_finalColor");
     shaderProgram3.lifeTimeLocation = gl.getAttribLocation(shaderProgram3.program, "a_lifeTime");
+    shaderProgram3.camRightLocation = gl.getUniformLocation(shaderProgram3.program, "u_camRight");
 
     initCubeBuffer();
     house = resources.house;
@@ -151,9 +153,13 @@ function init(resources) {
     //TEST
     testEmitter1= new PlaneEmitter([3,0,0], 3000, 1000, 0, [0.0,1.3,0], 0.020,
         0.01, [1,0,0,1], [0.9, 0.7, 0.3, 1], [0.5,0,0], [0,0,0.3]);
-    testEmitter2 = new SphereEmitter([0,0,0], 5000, 100, 0, [0,0,0], 0.01,
-        0.0, [0.3,0.3,0.3,1], [1, 1, 1, 1], 1);
+    testEmitter2 = new SphereEmitter([0,0,0], 1000, 7000, 0.0, [0,0.5,0], 0.05,
+        0.05, [0.3,0.3,0.3,1], [1, 1, 1, 1], 2, 00);
 
+    //setup scenegraph
+    scenegraph = sg.shader(shaderProgram2.program);
+
+    scenegraph.push(sg.draw(house));
 }
 
 function initCubeBuffer() {
@@ -192,6 +198,9 @@ function render(timeInMilliseconds) {
     mat4.lookAt(viewMatrix, camera.pos, vec3.add([], camera.pos, camera.direction), camera.up);
     mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 1, 1000);
 
+    var context = createSGContext(gl, projectionMatrix);
+    context.viewMatrix = viewMatrix;
+    // scenegraph.render(context);
     //update
     camera.update();
     testEmitter1.update();
