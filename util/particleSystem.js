@@ -1,3 +1,103 @@
+class ParticleSystem {
+	constructor() {
+		this.emitter = [];
+		this.vorteces = [];
+		for(var i = 0; i < 10; i++) this.vorteces[i] = new Vortex([0,0,0], [0,0,0], 0, [0,0,0], 0);
+		this.maxVorteces = 2; //TEST!!
+		this.lastUsedVortex = 0;
+	}
+
+
+	addEmitter(emitter) {
+		this.emitter.push(emitter);
+	}
+
+	update() {
+		this.vorteces.forEach(function(vortex) {
+			if(! vortex.isAlive()) {
+				var rand1 = Math.random();
+				var rand2 = Math.random();
+				var rand3 = Math.random();
+				vortex.spawn([rand3*2-1, 1+(rand2*4-2), 5+(rand1*3-1.5)], [rand1*2-1, rand2*2-1, rand3*2-1], 5000*(rand2*0.1+0.9), [rand2/100, rand1/100, rand3/100], rand3*10);
+			}
+		})
+		this.emitter.forEach(function(element) {
+			element.update();
+		})
+		this.vorteces.forEach(function(vortex) {
+			vortex.update();
+			// if(! vortex.isAlive()) vortex.spawn([0,0,0], [0,1000,0], 5000, [0,0,0], 1000);
+		})
+	}
+
+	render(viewMatrix, sceneMatrix, projectionMatrix) {
+		var that = this;
+		gl.useProgram(shaderProgram3.program);
+
+		var pos = [];
+		var ang = [];
+		var fac = [];
+
+
+		this.vorteces.forEach(function(vortex) {
+			Array.prototype.push.apply(pos, vortex.pos); //glsl needs arrays to be flattened, merge arrays without creating new object
+			Array.prototype.push.apply(ang, vortex.angularVel);
+			fac.push(vortex.factor);
+		})
+		gl.uniform3fv(shaderProgram3.vortexPosLocation, pos);
+		gl.uniform3fv(shaderProgram3.angularVelLocation, ang);
+		gl.uniform1fv(shaderProgram3.vortexFactorLocation, fac);
+		this.emitter.forEach(function(element) {
+			element.render(viewMatrix, sceneMatrix, projectionMatrix);
+		})
+	}
+}
+
+class Vortex {
+	constructor(pos, angularVel, lifeTime, vel, size) {
+		this.pos = pos;
+		this.angularVel = angularVel;
+		this.lifeTime = lifeTime;
+		this.time = 0;
+		this.vel = vel;
+		this.size = size;
+		this.factor = 0;
+	}
+
+	spawn(pos, angularVel, lifeTime, vel, size) {
+		this.pos = pos;
+		this.angularVel = angularVel;
+		this.lifeTime = lifeTime;
+		this.time = 0;
+		this.vel = vel;
+		this.size = size;
+		this.factor = 0;
+	}
+
+	update() {
+		//smoothly transition vortexLifeTime
+		if(this.isAlive()) {
+			this.time += timer.delta;
+			if(! this.isAlive) {
+				this.angularVel = [0,0,0];
+				this.lifeTime = 0;
+				this.time = 0;
+				this.factor = 0;
+				this.vel = [0,0,0];
+			} else {
+				var fac = this.time/this.lifeTime;
+				this.factor = (1-fac)*fac*30/this.size;
+				vec3.add(this.pos, this.pos, vec3.scale([], this.vel, this.time/1000));
+			}
+		}
+	}
+
+	isAlive() {
+		return this.time <= this.lifeTime;
+	}
+
+}
+
 /**
 Abstract base class implementing a particle emitter.
 Classes that inherit from this must implement the functions:
@@ -42,11 +142,7 @@ class Emitter {
 		this.fuzziness = fuzziness;
 		this.quadColors = startColor;
 		this.finalColors = finalColor;
-		this.vortexPos = vec3.add([], this.emitterPos, [0,1,0]); //TEST!
-		this.angularVel = [3,0,0];
-		this.vortexPull = 0.1;
-		this.vortTimer = 0;
-		this.sign = 1;
+		this.dampening = 0.1;
 
 		this.startForce = [0,0,0];
 		this.forceToApply = [0,0,0];
@@ -131,6 +227,7 @@ class Emitter {
 			} break;
 		}
 
+
 		this.numParticles = this.numParticles == 0 ? 0 : this.numParticles-1;
 
 		//set buffer data
@@ -150,9 +247,7 @@ class Emitter {
         gl.uniform4fv(shaderProgram3.colorLocation, this.quadColors);
         gl.uniform4fv(shaderProgram3.finalColorLocation, this.finalColors);
         gl.uniform3fv(shaderProgram3.generalDirLocation, this.direction);
-		gl.uniform3fv(shaderProgram3.vortexPosLocation, this.vortexPos);
-		gl.uniform3fv(shaderProgram3.angularVelLocation, this.angularVel);
-		gl.uniform1f(shaderProgram3.vortexPullLocation, this.vortexPull);
+		gl.uniform1f(shaderProgram3.dampeningLocation, this.dampening);
 
 		var camRight = vec3.cross([], camera.direction, camera.up);
 		gl.uniform3fv(shaderProgram3.camRightLocation, camRight);
@@ -183,13 +278,20 @@ class Emitter {
 		this.startForce = this.forceToApply;
 		this.forceTime = 0;
 		this.endForce = force;
-		this.forceEndTime = time;
+		this.forceEndTime = time + 0.00001;
 		this.forceState = this.forceStates.apply;
+	}
+
+	spawnVortex(pos, angularVel, size, time) {
+		this.vortexPos = pos;
+		this.angularVel = angularVel;
+		this.vortexSize = size;
+		this.vortexTime = 0;
+		this.vortexLifeTime = time; //prevent 0 division
 	}
 }
 
 //TODO: maybe prototypes are good enough
-//TODO: add normal vectors for billboarding
 class Particle {
 	constructor(time, pos, velocity, camDistance, lifeTime, force) {
 		this.time = time;
@@ -235,7 +337,7 @@ class PlaneEmitter extends Emitter {
 		particle.lifeTime = this.maxLifeTime*(1-centerDistance/this.planeWidth);
 		particle.time = particle.lifeTime;
 		particle.pos = planePos;
-		particle.velocity = vec3.scale([], vec3.sub([], this.vortexPos, particle.pos), 1); //TEST
+		particle.velocity = [0,0,0];
 		particle.force = this.forceToApply;
 	}
 

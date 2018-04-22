@@ -48,8 +48,7 @@ var cubeIndices =  new Float32Array([
 var house; //TEST
 
 //TEST
-var testEmitter1;
-var testEmitter2;
+var testSystem = new ParticleSystem();
 
 //handle mouse input
 document.addEventListener("mousemove", function(event){
@@ -151,17 +150,21 @@ function init(resources) {
     shaderProgram3.forceLocation = gl.getAttribLocation(shaderProgram3.program, "a_force");
     shaderProgram3.vortexPosLocation = gl.getUniformLocation(shaderProgram3.program, "u_vortexPos");
     shaderProgram3.angularVelLocation = gl.getUniformLocation(shaderProgram3.program, "u_angularVel");
-    shaderProgram3.vortexPullLocation = gl.getUniformLocation(shaderProgram3.program, "u_vortexPull");
+    shaderProgram3.vortexFactorLocation = gl.getUniformLocation(shaderProgram3.program, "u_vortexFactor");
+    shaderProgram3.numVortexLocation = gl.getUniformLocation(shaderProgram3.program, "u_numVorteces");
+    shaderProgram3.dampeningLocation = gl.getUniformLocation(shaderProgram3.program, "u_dampening");
 
     initCubeBuffer();
     house = resources.house;
     initHouseBuffer();
 
     //TEST
-    testEmitter1= new PlaneEmitter([0,0,5], 1000, 10000, 0.01, [0.0,1,0], 0.040,
+    var testEmitter1= new PlaneEmitter([0,0,5], 10000, 3000, 0.01, [0.0,1,0], 0.20,
         0.01, [1,0,0,1], [0.9, 0.7, 0.3, 1], [3,0,0], [0,0,3]);
-    testEmitter2 = new SphereEmitter([-2.93,4.694, -0.85], 500, 1000, 0.0001, [0,1,0], 0.08,
+    var testEmitter2 = new SphereEmitter([-2.93,4.694, -0.85], 500, 1000, 0.0001, [0,1,0], 0.08,
         0.001, [0.3,0.3,0.3,1], [1, 1, 1, 1], 1, 1);
+    testSystem.addEmitter(testEmitter1);
+    //testSystem.addEmitter(testEmitter2);
 
     var shader1Node = sg.shader(shaderProgram1.program);
     var shader2Node = sg.shader(shaderProgram2.program);
@@ -226,12 +229,10 @@ function render(timeInMilliseconds) {
     // scenegraph.render(context);
     //update
     camera.update();
-    testEmitter1.update();
-    testEmitter2.update();
+    testSystem.update();
 
     //render
-    testEmitter1.render(viewMatrix, sceneMatrix, projectionMatrix);
-    testEmitter2.render(viewMatrix, sceneMatrix, projectionMatrix);
+    testSystem.render(viewMatrix, sceneMatrix, projectionMatrix);
 
     gl.useProgram(shaderProgram2.program);
     shaderProgram2.setProjectionMat(projectionMatrix);
