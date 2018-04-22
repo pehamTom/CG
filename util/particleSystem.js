@@ -19,7 +19,6 @@ Classes that inherit from this must implement the functions:
  	-add alpha blending (particles probably need to be sorted)
 	-add textures
 	-OPTIONAL: encode data in texture instead of individual buffers
-	-add billboarding
 **/
 class Emitter {
 
@@ -43,6 +42,20 @@ class Emitter {
 		this.fuzziness = fuzziness;
 		this.quadColors = startColor;
 		this.finalColors = finalColor;
+		this.vortexPos = vec3.add([], this.emitterPos, [0,1,0]); //TEST!
+		this.angularVel = [3,0,0];
+		this.vortexPull = 0.1;
+		this.vortTimer = 0;
+		this.sign = 1;
+
+		this.startForce = [0,0,0];
+		this.forceToApply = [0,0,0];
+		this.endForce = [0,0,0];
+		this.forceTransitionTime = 5000;	//transition force slowly
+		this.forceStates = {apply:0, reverse:1, skip:2};
+		this.forceState = this.forceStates.skip;
+		this.forceTime = 0;
+		this.forceEndTime = 0;
 
 		//local buffers
 	    this.positions = [];
@@ -50,13 +63,14 @@ class Emitter {
 		this.velocities = [];
 		this.lifeTimes = [];
 		this.particleBuffer = [];
+		this.forces=[];
 
 		//local state variables
 	    this.numPart = 0;
 		this.lastusedParticle = 0;
 
 
-		for(var i = 0; i < this.maxNumPart; i++) this.particleBuffer[i] = new Particle(0, [0,0,0], [0,0,0], -1, 0);
+		for(var i = 0; i < this.maxNumPart; i++) this.particleBuffer[i] = new Particle(0, [0,0,0], [0,0,0], -1, 0, [0,0,0]);
 
 		//gpu buffers
 	    this.quadBuffer = setupStaticArrayBuffer(this.quadVertices);
@@ -64,6 +78,7 @@ class Emitter {
 	    this.posbuffer = gl.createBuffer();
 		this.velocitiesBuffer = gl.createBuffer();
 		this.lifeTimesBuffer = gl.createBuffer();
+		this.forcesBuffer = gl.createBuffer();
 	}
 
 	update() {
@@ -91,6 +106,31 @@ class Emitter {
 				this.numParticles++;
 			}
         }
+
+		//smoothly transition the force
+		switch(this.forceState) {
+			case this.forceStates.apply: {
+				this.forceTime += timer.delta;
+				if(this.forceTime >= this.forceEndTime) {
+					this.forceTime = 0;
+					this.forceState = this.forceStates.reverse;
+				} else {
+					if(this.forceTime <= this.forceTransitionTime) {
+						vec3.lerp(this.forceToApply, this.startForce, this.endForce,  this.forceTime/this.forceTransitionTime);
+					}
+				}
+			} break;
+			case this.forceStates.reverse: {
+				this.forceTime += timer.delta;
+				if(this.forceTime >= this.forceTransitionTime) {
+					this.startForce = [0,0,0];
+					this.forceState = this.forceStates.skip;
+				} else {
+					vec3.lerp(this.forceToApply, this.endForce, [0,0,0], this.forceTime/this.forceTransitionTime);
+				}
+			} break;
+		}
+
 		this.numParticles = this.numParticles == 0 ? 0 : this.numParticles-1;
 
 		//set buffer data
@@ -98,7 +138,8 @@ class Emitter {
 		setDynamicArrayBufferData(this.posbuffer, new Float32Array(this.positions.slice(0, this.numParticles*3)));
 		setDynamicArrayBufferData(this.velocitiesBuffer, new Float32Array(this.velocities.slice(0, this.numParticles*3)));
 		setDynamicArrayBufferData(this.lifeTimesBuffer, new Float32Array(this.lifeTimes.slice(0, this.numParticles)));
-    }
+		setDynamicArrayBufferData(this.forcesBuffer, new Float32Array(this.forces.slice(0, this.numParticles*3)));
+	}
 
     render(viewMatrix, sceneMatrix, projectionMatrix) {
         gl.useProgram(shaderProgram3.program); //shaderProgram3 is the particle shaderprogram
@@ -109,6 +150,9 @@ class Emitter {
         gl.uniform4fv(shaderProgram3.colorLocation, this.quadColors);
         gl.uniform4fv(shaderProgram3.finalColorLocation, this.finalColors);
         gl.uniform3fv(shaderProgram3.generalDirLocation, this.direction);
+		gl.uniform3fv(shaderProgram3.vortexPosLocation, this.vortexPos);
+		gl.uniform3fv(shaderProgram3.angularVelLocation, this.angularVel);
+		gl.uniform1f(shaderProgram3.vortexPullLocation, this.vortexPull);
 
 		var camRight = vec3.cross([], camera.direction, camera.up);
 		gl.uniform3fv(shaderProgram3.camRightLocation, camRight);
@@ -125,6 +169,7 @@ class Emitter {
         setArrayBufferFloatInstanced(this.timesBuffer, shaderProgram3.timeLocation, 1, 1);
 		setArrayBufferFloatInstanced(this.velocitiesBuffer, shaderProgram3.velocityLocation, 3, 1);
 		setArrayBufferFloatInstanced(this.lifeTimesBuffer, shaderProgram3.lifeTimeLocation, 1, 1);
+		setArrayBufferFloatInstanced(this.forcesBuffer, shaderProgram3.forceLocation, 3, 1);
 
         ext.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP, 0, 4, this.numParticles);
     }
@@ -133,17 +178,26 @@ class Emitter {
 		for(var i = 0; i < this.maxNumPart; i++) this.particleBuffer[i] = new Particle(0, [0,0,0], [0,0,0], -1, 0);
 		this.lastusedParticle = 0;
 	}
+
+	applyForce(force, time) {
+		this.startForce = this.forceToApply;
+		this.forceTime = 0;
+		this.endForce = force;
+		this.forceEndTime = time;
+		this.forceState = this.forceStates.apply;
+	}
 }
 
 //TODO: maybe prototypes are good enough
 //TODO: add normal vectors for billboarding
 class Particle {
-	constructor(time, pos, velocity, camDistance, lifeTime) {
+	constructor(time, pos, velocity, camDistance, lifeTime, force) {
 		this.time = time;
 		this.position = pos;
 		this.velocitie = velocity;
 		this.camDistance = camDistance;
 		this.lifeTime = lifeTime;
+		this.force = force;
 	}
 }
 
@@ -181,8 +235,8 @@ class PlaneEmitter extends Emitter {
 		particle.lifeTime = this.maxLifeTime*(1-centerDistance/this.planeWidth);
 		particle.time = particle.lifeTime;
 		particle.pos = planePos;
-		particle.velocity = [0,0,0];
-
+		particle.velocity = vec3.scale([], vec3.sub([], this.vortexPos, particle.pos), 1); //TEST
+		particle.force = this.forceToApply;
 	}
 
 	updateParticle(particle) {
@@ -191,17 +245,22 @@ class PlaneEmitter extends Emitter {
 		var rand2 = Math.random();
 		var rand3 = Math.random();
 
+		// particle.force = this.forceToApply;
 		this.positions[i*3] = particle.pos[0];
 		this.positions[i*3+1] = particle.pos[1];
 		this.positions[i*3+2] = particle.pos[2];
 
 		//add a bit of randomness to particle movement
-		this.velocities[i*3] = particle.velocity[0]+(rand1*2-1)*this.fuzziness;
-		this.velocities[i*3+1] = particle.velocity[1]+(rand2*2-1)*this.fuzziness;
-		this.velocities[i*3+2] = particle.velocity[2]+(rand3*2-1)*this.fuzziness;
+		this.velocities[i*3] = particle.velocity[0];
+		this.velocities[i*3+1] = particle.velocity[1];
+		this.velocities[i*3+2] = particle.velocity[2];
 		this.partTimes[i] = particle.time;
 		this.lifeTimes[this.numParticles] = particle.lifeTime;
+		this.forces[i*3] = particle.force[0];
+		this.forces[i*3+1] = particle.force[1];
+		this.forces[i*3+2] = particle.force[2];
 	}
+
 }
 
 /**
@@ -232,21 +291,36 @@ class SphereEmitter extends Emitter {
 		z *= normalizer*this.radius;
 
 		particle.pos = vec3.add([], this.emitterPos, [x,y,z]);
-		particle.lifeTime = this.maxLifeTime*(Math.random()*0.2+0.8);
+		particle.lifeTime = this.maxLifeTime*(Math.random()*this.fuzziness+(1-this.fuzziness));
 		particle.time = particle.lifeTime;
-		particle.velocity = vec3.scale([], vec3.normalize([], vec3.sub([], [x,y,z], this.emitterPos)), this.impulse);
+		particle.velocity = vec3.scale([],  [x,y,z], this.impulse);
 	}
 
 	updateParticle(particle){
 		var i = this.numParticles;
-
-		this.positions[i*3] = particle.pos[0];
-		this.positions[i*3+1] = particle.pos[1];
-		this.positions[i*3+2] = particle.pos[2];
-		this.velocities[i*3] = particle.velocity[0];
-		this.velocities[i*3+1] = particle.velocity[1];
-		this.velocities[i*3+2] = particle.velocity[2];
+		var rand = Math.random()*(this.fuzziness)+(1-this.fuzziness);
+		particle.force = this.forceToApply;
+		this.positions[i*3] = particle.pos[0] * rand;
+		this.positions[i*3+1] = particle.pos[1] * rand;
+		this.positions[i*3+2] = particle.pos[2] * rand;
+		this.velocities[i*3] = particle.velocity[0] * rand;
+		this.velocities[i*3+1] = particle.velocity[1] * rand;
+		this.velocities[i*3+2] = particle.velocity[2] * rand;
 		this.partTimes[i] = particle.time;
 		this.lifeTimes[i] = particle.lifeTime;
+		this.forces[i*3] = particle.force[0] * rand;
+		this.forces[i*3+1] = particle.force[1] * rand;
+		this.forces[i*3+2] = particle.force[2] * rand;
 	}
+
+	// update() {
+	// 	super.update();
+	//
+	//
+	// 	var wind = Math.random();
+	// 	if(wind < 0.007) {	//occasionally send random gust of wind
+	// 		console.log("wind");
+	// 		this.applyForce([Math.random()/500, Math.random()/500, Math.random()/500], Math.random()*1000);
+	// 	}
+	// }
 }

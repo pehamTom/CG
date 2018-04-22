@@ -801,7 +801,6 @@ class RenderSGNode extends SGNode {
     const modelViewMatrix = mat4.multiply(mat4.create(), context.viewMatrix, context.sceneMatrix);
     const normalMatrix = mat3.normalFromMat4(mat3.create(), modelViewMatrix);
     const projectionMatrix = context.projectionMatrix;
-
     const gl = context.gl,
       shader = context.shader;
     gl.uniformMatrix4fv(gl.getUniformLocation(shader, 'u_modelView'), false, modelViewMatrix);

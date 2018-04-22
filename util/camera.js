@@ -1,7 +1,8 @@
+var startPos = [-30, 5, 0];
 //object bundling all data and operation needed for camera animation
 var camera = {
-    pos:[-10, 0, 0],
-    direction:[10, 0, 0],
+    pos:vec3.copy([], startPos),
+    direction:vec3.negate([], startPos),
     up:[0, 1, 0],
     pitch:null,
     yaw:null,
@@ -62,7 +63,7 @@ var camera = {
         }
     },
     reset: function() {
-        this.pos = [-10, 0, 0];
+        this.pos = vec3.copy([], startPos);
         this.up = [0, 1, 0];
         this.fov = glMatrix.toRadian(30)
         this.lookAt(vec3.negate(this.direction, this.pos));

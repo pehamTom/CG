@@ -118,6 +118,7 @@ document.addEventListener("wheel", function(event) {
     camera.zoom(event.deltaY);
 })
 
+var updateQueue = []; //place objects that need to be updated in here
 var scenegraph;
 /**
  * initializes OpenGL context, compile shader, and load buffers
@@ -136,6 +137,8 @@ function init(resources) {
     //set attributes and uniforms that aren't shared by shaders
     shaderProgram1.colorLocation = gl.getAttribLocation(shaderProgram1.program, "a_color");
 
+    shaderProgram2.colorLocation = gl.getUniformLocation(shaderProgram2.program, "u_color");
+
     shaderProgram3.colorLocation = gl.getUniformLocation(shaderProgram3.program, "u_color");
     shaderProgram3.centerLocation = gl.getAttribLocation(shaderProgram3.program, "a_centerPos");
     shaderProgram3.timeLocation = gl.getAttribLocation(shaderProgram3.program, "a_time");
@@ -145,21 +148,41 @@ function init(resources) {
     shaderProgram3.finalColorLocation = gl.getUniformLocation(shaderProgram3.program, "u_finalColor");
     shaderProgram3.lifeTimeLocation = gl.getAttribLocation(shaderProgram3.program, "a_lifeTime");
     shaderProgram3.camRightLocation = gl.getUniformLocation(shaderProgram3.program, "u_camRight");
+    shaderProgram3.forceLocation = gl.getAttribLocation(shaderProgram3.program, "a_force");
+    shaderProgram3.vortexPosLocation = gl.getUniformLocation(shaderProgram3.program, "u_vortexPos");
+    shaderProgram3.angularVelLocation = gl.getUniformLocation(shaderProgram3.program, "u_angularVel");
+    shaderProgram3.vortexPullLocation = gl.getUniformLocation(shaderProgram3.program, "u_vortexPull");
 
     initCubeBuffer();
     house = resources.house;
     initHouseBuffer();
 
     //TEST
-    testEmitter1= new PlaneEmitter([3,0,0], 3000, 1000, 0, [0.0,1.3,0], 0.020,
-        0.01, [1,0,0,1], [0.9, 0.7, 0.3, 1], [0.5,0,0], [0,0,0.3]);
-    testEmitter2 = new SphereEmitter([0,0,0], 1000, 7000, 0.0, [0,0.5,0], 0.05,
-        0.05, [0.3,0.3,0.3,1], [1, 1, 1, 1], 2, 00);
+    testEmitter1= new PlaneEmitter([0,0,5], 1000, 10000, 0.01, [0.0,1,0], 0.040,
+        0.01, [1,0,0,1], [0.9, 0.7, 0.3, 1], [3,0,0], [0,0,3]);
+    testEmitter2 = new SphereEmitter([-2.93,4.694, -0.85], 500, 1000, 0.0001, [0,1,0], 0.08,
+        0.001, [0.3,0.3,0.3,1], [1, 1, 1, 1], 1, 1);
+
+    var shader1Node = sg.shader(shaderProgram1.program);
+    var shader2Node = sg.shader(shaderProgram2.program);
 
     //setup scenegraph
-    scenegraph = sg.shader(shaderProgram2.program);
+    scenegraph = shader2Node;
 
-    scenegraph.push(sg.draw(house));
+    //setup ground plane
+    // node = scenegraph.push(shader2Node);
+    node = new SetUniformSGNode("u_color", [0.9,0.9,0.9]);
+    node = shader2Node.push(node);
+    node = node.push(sg.rotateX(90));
+    node.push(sg.drawRect(100, 100));
+
+    //setup house
+    node =  new SetUniformSGNode("u_color", [0.4,0.2,0]);
+    node = scenegraph.push(node);
+    // node = node.push(sg.translate(0,0.7,0));
+    // node = node.push(sg.scale(0.7, 0.7, 0.7));
+    node.push(sg.draw(house));
+
 }
 
 function initCubeBuffer() {
@@ -276,7 +299,7 @@ loadResources({
   vs2: "shader/nocolorshader.vs.glsl",
   vs3: "shader/particleShader.vs.glsl",
   fs2: "shader/particleShader.fs.glsl",
-  house: "./house.obj"
+  house: "../models/house.obj"
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
 
