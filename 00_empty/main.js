@@ -118,6 +118,7 @@ document.addEventListener("wheel", function(event) {
 })
 
 var updateQueue = []; //place objects that need to be updated in here
+var resetQueue = []; //place objects that can be resetted here
 var scenegraph;
 /**
  * initializes OpenGL context, compile shader, and load buffers
@@ -138,16 +139,18 @@ function init(resources) {
 
     shaderProgram2.colorLocation = gl.getUniformLocation(shaderProgram2.program, "u_color");
 
-    shaderProgram3.colorLocation = gl.getUniformLocation(shaderProgram3.program, "u_color");
+    //shader for particle system needs quite some data
+    //the reason is, that we want to do as little processing of the particles on the cpu as possible
     shaderProgram3.centerLocation = gl.getAttribLocation(shaderProgram3.program, "a_centerPos");
     shaderProgram3.timeLocation = gl.getAttribLocation(shaderProgram3.program, "a_time");
-    shaderProgram3.generalDirLocation = gl.getUniformLocation(shaderProgram3.program, "u_generalDirection");
-    shaderProgram3.massLocation = gl.getUniformLocation(shaderProgram3.program, "u_mass");
     shaderProgram3.velocityLocation = gl.getAttribLocation(shaderProgram3.program, "a_velocity");
-    shaderProgram3.finalColorLocation = gl.getUniformLocation(shaderProgram3.program, "u_finalColor");
     shaderProgram3.lifeTimeLocation = gl.getAttribLocation(shaderProgram3.program, "a_lifeTime");
-    shaderProgram3.camRightLocation = gl.getUniformLocation(shaderProgram3.program, "u_camRight");
     shaderProgram3.forceLocation = gl.getAttribLocation(shaderProgram3.program, "a_force");
+    shaderProgram3.massLocation = gl.getUniformLocation(shaderProgram3.program, "u_mass");
+    shaderProgram3.finalColorLocation = gl.getUniformLocation(shaderProgram3.program, "u_finalColor");
+    shaderProgram3.camRightLocation = gl.getUniformLocation(shaderProgram3.program, "u_camRight");
+    shaderProgram3.generalDirLocation = gl.getUniformLocation(shaderProgram3.program, "u_generalDirection");
+    shaderProgram3.colorLocation = gl.getUniformLocation(shaderProgram3.program, "u_color");
     shaderProgram3.vortexPosLocation = gl.getUniformLocation(shaderProgram3.program, "u_vortexPos");
     shaderProgram3.angularVelLocation = gl.getUniformLocation(shaderProgram3.program, "u_angularVel");
     shaderProgram3.vortexFactorLocation = gl.getUniformLocation(shaderProgram3.program, "u_vortexFactor");
@@ -159,21 +162,29 @@ function init(resources) {
     initHouseBuffer();
 
     //TEST
-    var testEmitter1= new PlaneEmitter([0,0,5], 10000, 3000, 0.01, [0.0,1,0], 0.20,
-        0.01, [1,0,0,1], [0.9, 0.7, 0.3, 1], [3,0,0], [0,0,3]);
-    var testEmitter2 = new SphereEmitter([-2.93,4.694, -0.85], 500, 1000, 0.0001, [0,1,0], 0.08,
-        0.001, [0.3,0.3,0.3,1], [1, 1, 1, 1], 1, 1);
-    testSystem.addEmitter(testEmitter1);
-    //testSystem.addEmitter(testEmitter2);
+    var testEmitter1= new PlaneEmitter([0,0,5], 1000, 2000, 0.01, [0.0,2,0], 0.07,
+        0.01, [1,0,0,1], [0.9, 0.7, 0.3, 1], new Particle(null), [3,0,0], [0,0,1]);
+    var testEmitter2 = new SphereEmitter([-2.93,4.694, -0.85], 2000, 2000, 0.0001, [0,1,0], 0.08,
+        0.001, [0.3,0.3,0.3,1], [1, 1, 1, 1], new Particle(null), 0.3, 1);
+    var testEmitter3 = new CircleEmitter([500, 100, 0], 1000, 3000, 0.0001, [0,0,0], 3,
+        0.01, [0.02,0.05,0.5,1], [0.7, 0.1, 0.5, 1], new Particle(null), [0,0,1], [0,1,0], 75, 0.2);
+    //TEST
+    var testEmitter4= new PlaneEmitter([0,10,0], 1000, 10000, 0.03, [0.0,-0.6,0], 0.07,
+        0.01, [1,1,1,1], [1, 1, 1, 1], new Particle(null), [20,0,0], [0,0,20]);
+
+    // testSystem.addEmitter(testEmitter1);
+    testSystem.addEmitter(testEmitter2);
+    testSystem.addEmitter(testEmitter3);
+    testSystem.addEmitter(testEmitter4);
 
     var shader1Node = sg.shader(shaderProgram1.program);
     var shader2Node = sg.shader(shaderProgram2.program);
+    var shader3Node = sg.shader(ShaderProgram.program);
 
     //setup scenegraph
-    scenegraph = shader2Node;
+    scenegraph = new SGNode([shader2Node, shader1Node]);
 
     //setup ground plane
-    // node = scenegraph.push(shader2Node);
     node = new SetUniformSGNode("u_color", [0.9,0.9,0.9]);
     node = shader2Node.push(node);
     node = node.push(sg.rotateX(90));
@@ -181,26 +192,28 @@ function init(resources) {
 
     //setup house
     node =  new SetUniformSGNode("u_color", [0.4,0.2,0]);
-    node = scenegraph.push(node);
+    node = shader2Node.push(node);
     // node = node.push(sg.translate(0,0.7,0));
     // node = node.push(sg.scale(0.7, 0.7, 0.7));
     node.push(sg.draw(house));
 
+    //setup list of resettable objects
+    resetQueue.push(timer);
+    resetQueue.push(camera);
+    resetQueue.push(testSystem);
+
+    //setup list of updatable objects
+    updateQueue.push(camera);
+    updateQueue.push(testSystem);
 }
 
 function initCubeBuffer() {
 
-  cubeVertexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, cubeVertices, gl.STATIC_DRAW);
+  cubeVertexBuffer = setupStaticArrayBuffer(cubeVertices);
 
-  cubeColorBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, cubeColors, gl.STATIC_DRAW);
+  cubeColorBuffer = setupStaticArrayBuffer(cubeColors);
 
-  cubeIndexBuffer = gl.createBuffer ();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIndexBuffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeIndices), gl.STATIC_DRAW);
+  cubeIndexBuffer = setUpStaticElementBuffer(new Uint16Array(cubeIndices));
 }
 
 /**
@@ -222,14 +235,14 @@ function render(timeInMilliseconds) {
     var viewMatrix = [];
     mat4.identity(sceneMatrix);
     mat4.lookAt(viewMatrix, camera.pos, vec3.add([], camera.pos, camera.direction), camera.up);
-    mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 1, 1000);
+    mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 1, 2000);
 
     var context = createSGContext(gl, projectionMatrix);
     context.viewMatrix = viewMatrix;
-    // scenegraph.render(context);
+    scenegraph.render(context);
+
     //update
-    camera.update();
-    testSystem.update();
+    update();
 
     //render
     testSystem.render(viewMatrix, sceneMatrix, projectionMatrix);
@@ -263,7 +276,6 @@ function renderRobot(sceneMatrix, viewMatrix) {
   gl.enableVertexAttribArray(shaderProgram1.colorLocation);
   ext.vertexAttribDivisorANGLE(shaderProgram1.colorLocation, 0);    //this is IMPORTANT -- even though we don't use it
 
-  // TASK 10-2
   // store current sceneMatrix in originSceneMatrix, so it can be restored
   var originSceneMatrix = []
   mat4.rotate(originSceneMatrix, sceneMatrix, camera.animatedAngle*2, [0,1,0]);
@@ -335,8 +347,13 @@ function renderHouse(viewMatrix, originSceneMatrix) {
 
 //reset all state
 function reset() {
-    timer.reset();
-    camera.reset();
-    testEmitter1.reset();
-    testEmitter2.reset();
+    resetQueue.forEach(function(resettable) {
+        resettable.reset();
+    })
+}
+
+function update() {
+    updateQueue.forEach(function(updatable) {
+        updatable.update();
+    })
 }

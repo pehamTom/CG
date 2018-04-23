@@ -17,6 +17,13 @@ function setupStaticArrayBuffer(bufferData) {
     return buffer;
 }
 
+function setUpStaticElementBuffer(bufferData) {
+    buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, bufferData, gl.STATIC_DRAW);
+    return buffer;
+}
+
 function setStaticArrayBufferData(buffer, data) {
 	gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 	gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);

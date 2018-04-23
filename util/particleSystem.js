@@ -13,14 +13,15 @@ class ParticleSystem {
 	}
 
 	update() {
-		this.vorteces.forEach(function(vortex) {
-			if(! vortex.isAlive()) {
-				var rand1 = Math.random();
-				var rand2 = Math.random();
-				var rand3 = Math.random();
-				vortex.spawn([rand3*2-1, 1+(rand2*4-2), 5+(rand1*3-1.5)], [rand1*2-1, rand2*2-1, rand3*2-1], 5000*(rand2*0.1+0.9), [rand2/100, rand1/100, rand3/100], rand3*10);
-			}
-		})
+		// this.vorteces.forEach(function(vortex) {
+		// 	if(! vortex.isAlive()) {
+		// 		var rand1 = Math.random();
+		// 		var rand2 = Math.random();
+		// 		var rand3 = Math.random();
+		// 		vortex.spawn([rand3*2-1, 1+(rand2*4-2), 5+(rand1*3-1.5)], [rand1*2-1, rand2*2-1, rand3*2-1], 5000*(rand2*0.1+0.9), [rand2/100, rand1/100, rand3/100], rand3);
+		// 	}
+		// })
+		this.vorteces[9].spawnConstant([500,100,0], [10000,0,0], 1);
 		this.emitter.forEach(function(element) {
 			element.update();
 		})
@@ -62,6 +63,7 @@ class Vortex {
 		this.vel = vel;
 		this.size = size;
 		this.factor = 0;
+		this.isConstant = false;
 	}
 
 	spawn(pos, angularVel, lifeTime, vel, size) {
@@ -74,7 +76,24 @@ class Vortex {
 		this.factor = 0;
 	}
 
+	spawnConstant(pos, angularVel, size) {
+		this.pos = pos;
+		this.angularVel = angularVel;
+		this.time = 0;
+		this.size = size;
+		this.factor = 0.5*0.5*60/size;
+		this.isConstant = true;
+	}
+
+	kill() {
+		this.isconstant = false;
+		this.time = 0;
+		this.lifeTime = 0;
+	}
 	update() {
+		if(this.isConstant) {
+			return;
+		}
 		//smoothly transition vortexLifeTime
 		if(this.isAlive()) {
 			this.time += timer.delta;
@@ -86,14 +105,21 @@ class Vortex {
 				this.vel = [0,0,0];
 			} else {
 				var fac = this.time/this.lifeTime;
-				this.factor = (1-fac)*fac*30/this.size;
+				this.factor = (1-fac)*fac*60/this.size;
 				vec3.add(this.pos, this.pos, vec3.scale([], this.vel, this.time/1000));
 			}
 		}
 	}
 
 	isAlive() {
+		if(this.isConstant) return true;
 		return this.time <= this.lifeTime;
+	}
+
+	reset() {
+		this.emitter.forEach(function(emitter) {
+			emitter.reset();
+		})
 	}
 
 }
@@ -123,7 +149,7 @@ Classes that inherit from this must implement the functions:
 class Emitter {
 
 	constructor(emitterPos, partsPerSec, maxLifeTime, mass, direction,
-	particleSize, fuzziness, startColor, finalColor) {
+	particleSize, fuzziness, startColor, finalColor, particleProto) {
 
 	    this.quadVertices = new Float32Array([
 	      -0.5*particleSize, -0.5*particleSize, 0.0,
@@ -156,7 +182,7 @@ class Emitter {
 		//local buffers
 	    this.positions = [];
 	    this.partTimes = [];
-		this.velocities = [];
+		this.velocitys = [];
 		this.lifeTimes = [];
 		this.particleBuffer = [];
 		this.forces=[];
@@ -164,15 +190,14 @@ class Emitter {
 		//local state variables
 	    this.numPart = 0;
 		this.lastusedParticle = 0;
-
-
-		for(var i = 0; i < this.maxNumPart; i++) this.particleBuffer[i] = new Particle(0, [0,0,0], [0,0,0], -1, 0, [0,0,0]);
-
+		for(var i = 0; i < this.maxNumPart; i++) {
+			this.particleBuffer[i] = new particleProto.constructor(this);
+		}
 		//gpu buffers
 	    this.quadBuffer = setupStaticArrayBuffer(this.quadVertices);
 	    this.timesBuffer = gl.createBuffer();
 	    this.posbuffer = gl.createBuffer();
-		this.velocitiesBuffer = gl.createBuffer();
+		this.velocitysBuffer = gl.createBuffer();
 		this.lifeTimesBuffer = gl.createBuffer();
 		this.forcesBuffer = gl.createBuffer();
 	}
@@ -191,11 +216,26 @@ class Emitter {
 		this.numParticles = 0;
         for(i = 0; i < this.maxNumPart; i++) { //set data for all particles
 			var p = this.particleBuffer[i];
-			if(p.time > 0) {	//check if particle is alive
-				p.time -= timer.delta;
-	            if(p.time > 0) { //check if particle still alive otherwise we don't update
+			if(p.isAlive()) {	//check if particle is alive
+				p.update();
+	            if(p.isAlive()) { //check if particle still alive otherwise we don't update
 					p.camDistance = vec3.length(vec3.sub([], this.particleBuffer[i].pos, camera.pos)); //TODO: needed for sorting
-					this.updateParticle(p); //use "abstract" update function
+
+					var rand = Math.random()*(this.fuzziness)+(1-this.fuzziness);
+
+					//copy values to gpu buffers
+					p.force = this.forceToApply;
+					this.positions[i*3] = p.pos[0];
+					this.positions[i*3+1] = p.pos[1];
+					this.positions[i*3+2] = p.pos[2];
+					this.velocitys[i*3] = p.velocity[0];
+					this.velocitys[i*3+1] = p.velocity[1];
+					this.velocitys[i*3+2] = p.velocity[2];
+					this.partTimes[i] = p.time;
+					this.lifeTimes[i] = p.lifeTime;
+					this.forces[i*3] = p.force[0];
+					this.forces[i*3+1] = p.force[1];
+					this.forces[i*3+2] = p.force[2];
 	            } else {
 					p.camDistance = -1; //TODO:if particle is dead make sure its at the end of the buffer after sorting
 				}
@@ -233,7 +273,7 @@ class Emitter {
 		//set buffer data
 		setDynamicArrayBufferData(this.timesBuffer, new Float32Array(this.partTimes.slice(0,this.numParticles)));
 		setDynamicArrayBufferData(this.posbuffer, new Float32Array(this.positions.slice(0, this.numParticles*3)));
-		setDynamicArrayBufferData(this.velocitiesBuffer, new Float32Array(this.velocities.slice(0, this.numParticles*3)));
+		setDynamicArrayBufferData(this.velocitysBuffer, new Float32Array(this.velocitys.slice(0, this.numParticles*3)));
 		setDynamicArrayBufferData(this.lifeTimesBuffer, new Float32Array(this.lifeTimes.slice(0, this.numParticles)));
 		setDynamicArrayBufferData(this.forcesBuffer, new Float32Array(this.forces.slice(0, this.numParticles*3)));
 	}
@@ -262,7 +302,7 @@ class Emitter {
 		//apply these v
 		setArrayBufferFloatInstanced(this.posbuffer, shaderProgram3.centerLocation, 3, 1);
         setArrayBufferFloatInstanced(this.timesBuffer, shaderProgram3.timeLocation, 1, 1);
-		setArrayBufferFloatInstanced(this.velocitiesBuffer, shaderProgram3.velocityLocation, 3, 1);
+		setArrayBufferFloatInstanced(this.velocitysBuffer, shaderProgram3.velocityLocation, 3, 1);
 		setArrayBufferFloatInstanced(this.lifeTimesBuffer, shaderProgram3.lifeTimeLocation, 1, 1);
 		setArrayBufferFloatInstanced(this.forcesBuffer, shaderProgram3.forceLocation, 3, 1);
 
@@ -270,7 +310,7 @@ class Emitter {
     }
 
 	reset(){
-		for(var i = 0; i < this.maxNumPart; i++) this.particleBuffer[i] = new Particle(0, [0,0,0], [0,0,0], -1, 0);
+		for(var i = 0; i < this.maxNumPart; i++) this.particleBuffer[i].reset();
 		this.lastusedParticle = 0;
 	}
 
@@ -291,17 +331,6 @@ class Emitter {
 	}
 }
 
-//TODO: maybe prototypes are good enough
-class Particle {
-	constructor(time, pos, velocity, camDistance, lifeTime, force) {
-		this.time = time;
-		this.position = pos;
-		this.velocitie = velocity;
-		this.camDistance = camDistance;
-		this.lifeTime = lifeTime;
-		this.force = force;
-	}
-}
 
 /**
 Implementation of a particle emitter
@@ -312,10 +341,10 @@ Emits Particles origining on a plane and sends them towards direction
 **/
 class PlaneEmitter extends Emitter {
 	constructor(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
-	direction=[0,0,0], particleSize=0.01, fuzziness=0, startColor, finalColor, planeX=[1,0,0], planeZ=[0,0,1]) {
+	direction=[0,0,0], particleSize=0.01, fuzziness=0, startColor, finalColor, particleProto, planeX=[1,0,0], planeZ=[0,0,1]) {
 
 		super(emitterPos, partsPerSec, maxLifeTime, mass, direction,
-			particleSize, fuzziness, startColor, finalColor);
+			particleSize, fuzziness, startColor, finalColor, particleProto);
 
 		//local plane coordinate system
 	    this.planeX = planeX;
@@ -332,35 +361,7 @@ class PlaneEmitter extends Emitter {
             vec3.add([], vec3.scale([], this.planeX,(rand1*2-1)),
             vec3.scale([], this.planeZ, (rand2*2-1))));
 
-		var centerDistance = vec3.distance(this.emitterPos, planePos);
-
-		particle.lifeTime = this.maxLifeTime*(1-centerDistance/this.planeWidth);
-		particle.time = particle.lifeTime;
-		particle.pos = planePos;
-		particle.velocity = [0,0,0];
-		particle.force = this.forceToApply;
-	}
-
-	updateParticle(particle) {
-		var i = this.numParticles;
-		var rand1 = Math.random();
-		var rand2 = Math.random();
-		var rand3 = Math.random();
-
-		// particle.force = this.forceToApply;
-		this.positions[i*3] = particle.pos[0];
-		this.positions[i*3+1] = particle.pos[1];
-		this.positions[i*3+2] = particle.pos[2];
-
-		//add a bit of randomness to particle movement
-		this.velocities[i*3] = particle.velocity[0];
-		this.velocities[i*3+1] = particle.velocity[1];
-		this.velocities[i*3+2] = particle.velocity[2];
-		this.partTimes[i] = particle.time;
-		this.lifeTimes[this.numParticles] = particle.lifeTime;
-		this.forces[i*3] = particle.force[0];
-		this.forces[i*3+1] = particle.force[1];
-		this.forces[i*3+2] = particle.force[2];
+		particle.spawn(planePos, [0,0,0]);
 	}
 
 }
@@ -373,10 +374,10 @@ Additional Parameters:
 **/
 class SphereEmitter extends Emitter {
 	constructor(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
-	direction=[0,0,0], particleSize=0.01, fuzziness=0, startColor, finalColor, radius, impulse = 0) {
+	direction=[0,0,0], particleSize=0.01, fuzziness=0, startColor, finalColor, particleProto, radius, impulse = 0) {
 
 		super(emitterPos, partsPerSec, maxLifeTime, mass, direction,
-			particleSize, fuzziness, startColor, finalColor);
+			particleSize, fuzziness, startColor, finalColor, particleProto);
 		this.radius = radius;
 		this.impulse = impulse;
 	}
@@ -392,37 +393,115 @@ class SphereEmitter extends Emitter {
 		y *= normalizer*this.radius;
 		z *= normalizer*this.radius;
 
-		particle.pos = vec3.add([], this.emitterPos, [x,y,z]);
-		particle.lifeTime = this.maxLifeTime*(Math.random()*this.fuzziness+(1-this.fuzziness));
-		particle.time = particle.lifeTime;
-		particle.velocity = vec3.scale([],  [x,y,z], this.impulse);
+		var pos = vec3.add([], this.emitterPos, [x,y,z]);
+		var velocity = vec3.scale([],  [x,y,z], this.impulse);
+		particle.spawn(pos, velocity);
 	}
 
-	updateParticle(particle){
-		var i = this.numParticles;
-		var rand = Math.random()*(this.fuzziness)+(1-this.fuzziness);
-		particle.force = this.forceToApply;
-		this.positions[i*3] = particle.pos[0] * rand;
-		this.positions[i*3+1] = particle.pos[1] * rand;
-		this.positions[i*3+2] = particle.pos[2] * rand;
-		this.velocities[i*3] = particle.velocity[0] * rand;
-		this.velocities[i*3+1] = particle.velocity[1] * rand;
-		this.velocities[i*3+2] = particle.velocity[2] * rand;
-		this.partTimes[i] = particle.time;
-		this.lifeTimes[i] = particle.lifeTime;
-		this.forces[i*3] = particle.force[0] * rand;
-		this.forces[i*3+1] = particle.force[1] * rand;
-		this.forces[i*3+2] = particle.force[2] * rand;
+}
+
+class CircleEmitter extends PlaneEmitter {
+	constructor(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
+	direction=[0,0,0], particleSize=0.01, fuzziness=0, startColor, finalColor,
+	particleProto, planeX=[1,0,0], planeZ=[0,0,1], radius, impulse = 0) {
+
+		vec3.normalize(planeX, planeX);
+		vec3.normalize(planeZ, planeZ);
+
+		super(emitterPos, partsPerSec, maxLifeTime, mass,
+		direction, particleSize, fuzziness, startColor,
+		finalColor, particleProto, planeX, planeZ);
+
+		this.radius = radius;
+		this.impulse = impulse;
+
 	}
 
-	// update() {
-	// 	super.update();
-	//
-	//
-	// 	var wind = Math.random();
-	// 	if(wind < 0.007) {	//occasionally send random gust of wind
-	// 		console.log("wind");
-	// 		this.applyForce([Math.random()/500, Math.random()/500, Math.random()/500], Math.random()*1000);
-	// 	}
-	// }
+	//create random point on circle
+	createParticle(particle) {
+		//create random point on sphere
+		var x = (Math.random()*2-1);
+		var z = (Math.random()*2-1);
+		var normalizer = 1/Math.sqrt(x*x+z*z);
+		x *= normalizer*this.radius;
+		z *= normalizer*this.radius;
+
+		var localX = vec3.scale([], this.planeX, x);
+		var localZ = vec3.scale([], this.planeZ, z);
+		var circlePoint = vec3.add([], localX, localZ);
+		var pos = vec3.add([], this.emitterPos, circlePoint);
+		var velocity = vec3.scale([],  circlePoint, this.impulse);
+		particle.spawn(pos, velocity);
+	}
+}
+
+
+//TODO: maybe prototypes are good enough
+class Particle {
+	constructor(emitter) {
+		this.time = 0;
+		this.pos = [0,0,0];
+		this.velocity = [0,0,0];
+		this.camDistance = -1;
+		this.lifeTime = 0;
+		this.force = [0,0,0];
+		this.emitter = emitter;
+	}
+	spawn(pos, velocity) {
+		this.time =this.emitter.maxLifeTime;
+		this.pos = pos;
+		this.velocity = velocity;
+		this.camDistance = -1;
+		this.lifeTime = this.emitter.maxLifeTime;
+		this.force = this.emitter.forceToApply;
+	}
+
+	reset() {
+		this.time = 0;
+		this.pos = [0,0,0];
+		this.velocity = [0,0,0];
+		this.camDistance = -1;
+		this.lifeTime = 0;
+		this.force = [0,0,0];
+	}
+
+	update() {
+		this.time -= timer.delta;
+	}
+
+	isAlive() {
+		return this.time > 0;
+	}
+}
+
+class SmokeParticle extends Particle {
+	constructor(emitter) {
+		super(emitter)
+	}
+
+	spawn(pos, velocity) {
+		super.spawn(pos, velocity);
+		this.lifeTime = this.emitter.maxLifeTime*(Math.random()*this.emitter.fuzziness+(1-this.emitter.fuzziness));
+	}
+}
+
+class FireParticle extends Particle {
+	constructor(emitter) {
+		super(emitter);
+	}
+
+	spawn(pos, velocity) {
+		this.pos = pos;
+		this.velocity = velocity;
+		this.camDistance = -1;
+		this.force = this.emitter.forceToApply;
+		if(this.emitter.planeWidth) { //if a planeemitter is used, lifetime of particle depends on distance from origin
+			var centerDistance = vec3.distance(this.emitter.emitterPos, this.pos);
+			this.lifeTime = this.emitter.maxLifeTime*(1-centerDistance/this.emitter.planeWidth);
+			this.time = this.lifeTime;
+		} else {
+			this.lifeTime = this.emitter.maxLifeTime;
+			this.time = this.lifeTime;
+		}
+	}
 }
