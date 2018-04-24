@@ -166,16 +166,16 @@ function init(resources) {
         0.01, [1,0,0,1], [0.9, 0.7, 0.3, 1], new Particle(null), [3,0,0], [0,0,1]);
     var testEmitter2 = new SphereEmitter([-2.93,4.694, -0.85], 2000, 2000, 0.0001, [0,1,0], 0.08,
         0.001, [0.3,0.3,0.3,1], [1, 1, 1, 1], new Particle(null), 0.3, 1);
-    var testEmitter3 = new CircleEmitter([500, 100, 0], 1000, 3000, 0.0001, [0,0,0], 3,
-        0.01, [0.02,0.05,0.5,1], [0.7, 0.1, 0.5, 1], new Particle(null), [0,0,1], [0,1,0], 75, 0.2);
+    var testEmitter3 = new CircleEmitter([500, 100, 0], 10000, 3000, 0.0001, [0,0,0], 3,
+        0.01, [0.02,0.05,0.5,1], [0.7, 0.1, 0.5, 1], new Particle(null), [0,0,1], [0,1,0], 75, 1.0);
     //TEST
-    var testEmitter4= new PlaneEmitter([0,10,0], 1000, 10000, 0.03, [0.0,-0.6,0], 0.07,
+    var testEmitter4= new PlaneEmitter([0,10,0], 1000, 1000, 0.03, [0.0,-0.6,0], 0.07,
         0.01, [1,1,1,1], [1, 1, 1, 1], new Particle(null), [20,0,0], [0,0,20]);
 
     // testSystem.addEmitter(testEmitter1);
     testSystem.addEmitter(testEmitter2);
     testSystem.addEmitter(testEmitter3);
-    testSystem.addEmitter(testEmitter4);
+    // testSystem.addEmitter(testEmitter4);
 
     var shader1Node = sg.shader(shaderProgram1.program);
     var shader2Node = sg.shader(shaderProgram2.program);
