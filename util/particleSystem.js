@@ -4,9 +4,11 @@ class ParticleSystem {
 	constructor() {
 		this.emitter = [];
 		this.vorteces = [];
-		for(var i = 0; i < 10; i++) this.vorteces[i] = new Vortex(zero, zero, 0, zero, 0);
-		this.maxVorteces = 2; //TEST!!
+		this.maxVorteces = 10;
+		for(var i = 0; i < this.maxVorteces; i++) this.vorteces[i] = new Vortex(zero, zero, 0, zero, 10);
 		this.lastUsedVortex = 0;
+		this.numConstantVorteces = 0;
+		this.turbulence = false;
 	}
 
 
@@ -15,21 +17,21 @@ class ParticleSystem {
 	}
 
 	update() {
-		// this.vorteces.forEach(function(vortex) {
-		// 	if(! vortex.isAlive()) {
-		// 		var rand1 = Math.random();
-		// 		var rand2 = Math.random();
-		// 		var rand3 = Math.random();
-		// 		vortex.spawn([rand3*2-1, 1+(rand2*4-2), 5+(rand1*3-1.5)], [rand1*2-1, rand2*2-1, rand3*2-1], 5000*(rand2*0.1+0.9), [rand2/100, rand1/100, rand3/100], rand3);
-		// 	}
-		// })
-		this.vorteces[9].spawnConstant([500,100,0], [10000,0,0], 0.1);
+		if(this.turbulence) {
+			for(let i = this.numConstantVorteces; i < 2; i++) {
+				if(! this.vorteces[i].isAlive()) {
+					let rand = Math.random()*this.emitter.length;
+					let emitter = this.emitter[Math.floor(rand)];
+					let angular = [Math.random()*0.001, Math.random()*0.001, Math.random()*0.001];
+					this.vorteces[i].spawn(vec3.add([], [0,5,0],emitter.emitterPos), [0,0.01,0], 10000, zero, 0.000000001);
+				}
+				this.vorteces[i].update();
+			}
+		}
+
+
 		this.emitter.forEach(function(element) {
 			element.update();
-		})
-		this.vorteces.forEach(function(vortex) {
-			vortex.update();
-			// if(! vortex.isAlive()) vortex.spawn([0,0,0], [0,1000,0], 5000, [0,0,0], 1000);
 		})
 	}
 
@@ -41,7 +43,7 @@ class ParticleSystem {
 		var ang = [];
 		var fac = [];
 
-
+		let i = 0;
 		this.vorteces.forEach(function(vortex) {
 			Array.prototype.push.apply(pos, vortex.pos); //glsl needs arrays to be flattened, merge arrays without creating new object
 			Array.prototype.push.apply(ang, vortex.angularVel);
@@ -54,15 +56,29 @@ class ParticleSystem {
 			element.render(viewMatrix, sceneMatrix, projectionMatrix);
 		})
 	}
+
+	setConstantVortex(pos, angularVel, size) {
+		if(this.numConstantVorteces >= 10) return;	//all slots full
+		this.vorteces[this.numConstantVorteces].spawnConstant(pos, angularVel, size);
+		this.numConstantVorteces++;
+	}
+
+	enableTurbulence() {
+		this.turbulence = true;
+	}
+
+	disableTurbulence() {
+		this.turbulence = false;
+	}
 }
 
 class Vortex {
 	constructor(pos, angularVel, lifeTime, vel, size) {
-		this.pos = pos;
-		this.angularVel = angularVel;
+		this.pos = vec3.copy([], pos);
+		this.angularVel = vec3.copy([], angularVel);
 		this.lifeTime = lifeTime;
 		this.time = 0;
-		this.vel = vel;
+		this.vel = vec3.copy([], vel);
 		this.size = size;
 		this.factor = 0;
 		this.isConstant = false;
@@ -83,12 +99,12 @@ class Vortex {
 		vec3.copy(this.angularVel, angularVel);
 		this.time = 0;
 		this.size = size;
-		this.factor = 0.5*0.5*60/size;
+		this.factor = 0.5*0.5*60*size;
 		this.isConstant = true;
 	}
 
 	kill() {
-		this.isconstant = false;
+		this.isConstant = false;
 		this.time = 0;
 		this.lifeTime = 0;
 	}
@@ -99,7 +115,7 @@ class Vortex {
 		//smoothly transition vortexLifeTime
 		if(this.isAlive()) {
 			this.time += timer.delta;
-			if(! this.isAlive) {
+			if(! this.isAlive()) {
 				vec3.copy(this.angularVel, zero);
 				this.lifeTime = 0;
 				this.time = 0;
@@ -107,22 +123,17 @@ class Vortex {
 				vec3.copy(this.vel, zero);
 			} else {
 				var fac = this.time/this.lifeTime;
-				this.factor = (1-fac)*fac*60/this.size;
-				vec3.add(this.pos, this.pos, vec3.scale([], this.vel, this.time/1000));
+				this.factor = (1-fac)*fac*60*this.size;
+				vec3.add(this.pos, this.pos, vec3.lerp([], zero, this.vel, this.time/this.lifeTime));
 			}
 		}
 	}
 
 	isAlive() {
 		if(this.isConstant) return true;
-		return this.time <= this.lifeTime;
+		return this.time < this.lifeTime;
 	}
 
-	reset() {
-		this.emitter.forEach(function(emitter) {
-			emitter.reset();
-		})
-	}
 
 }
 
@@ -151,7 +162,7 @@ Classes that inherit from this must implement the functions:
 class Emitter {
 
 	constructor(emitterPos, partsPerSec, maxLifeTime, mass, direction,
-	particleSize, fuzziness, startColor, finalColor, particleProto) {
+	particleSize, fuzziness, startColor, finalColor, particleProto, timeScaling) {
 
 	    this.quadVertices = new Float32Array([
 	      -0.5*particleSize, -0.5*particleSize, 0.0,
@@ -171,6 +182,7 @@ class Emitter {
 		this.quadColors = startColor;
 		this.finalColors = finalColor;
 		this.dampening = 0.1;
+		this.timeScaling = timeScaling;
 
 		this.startForce = [0,0,0];
 		this.forceToApply = [0,0,0];
@@ -295,6 +307,7 @@ class Emitter {
         gl.uniform4fv(shaderProgram3.finalColorLocation, this.finalColors);
         gl.uniform3fv(shaderProgram3.generalDirLocation, this.direction);
 		gl.uniform1f(shaderProgram3.dampeningLocation, this.dampening);
+		gl.uniform1f(shaderProgram3.timeScaleLocation, this.timeScaling);
 
 		vec3.cross(this.camRight, camera.direction, camera.up);
 		gl.uniform3fv(shaderProgram3.camRightLocation, this.camRight);
@@ -304,14 +317,13 @@ class Emitter {
 
         setArrayBufferFloat(this.quadBuffer, shaderProgram3.positionLoc, 3); //render all vertices per instance
 
-		//apply these v
 		setArrayBufferFloatInstanced(this.posbuffer, shaderProgram3.centerLocation, 3, 1);
         setArrayBufferFloatInstanced(this.timesBuffer, shaderProgram3.timeLocation, 1, 1);
 		setArrayBufferFloatInstanced(this.velocitysBuffer, shaderProgram3.velocityLocation, 3, 1);
 		setArrayBufferFloatInstanced(this.lifeTimesBuffer, shaderProgram3.lifeTimeLocation, 1, 1);
 		setArrayBufferFloatInstanced(this.forcesBuffer, shaderProgram3.forceLocation, 3, 1);
 
-        ext.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP, 0, 4, this.numParticles);
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.numParticles);
     }
 
 	reset(){
@@ -346,31 +358,30 @@ Emits Particles origining on a plane and sends them towards direction
 **/
 class PlaneEmitter extends Emitter {
 	constructor(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
-	direction=[0,0,0], particleSize=0.01, fuzziness=0, startColor, finalColor, particleProto, planeX=[1,0,0], planeZ=[0,0,1]) {
+	direction=[0,0,0], particleSize=0.01, fuzziness=0, startColor, finalColor, particleProto, timeScaling, planeX=[1,0,0], planeZ=[0,0,1]) {
 
 		super(emitterPos, partsPerSec, maxLifeTime, mass, direction,
-			particleSize, fuzziness, startColor, finalColor, particleProto);
+			particleSize, fuzziness, startColor, finalColor, particleProto, timeScaling);
 
 		//local plane coordinate system
 	    this.planeX = planeX;
 	    this.planeZ = planeZ;
-		this.planeWidth = vec3.length(this.planeX); //just for caching the value
+		this.planeWidth = vec3.distance(this.emitterPos, vec3.add([], this.planeX, this.planeZ)); //just for caching the value
 		this.planePos = [];
+		this.localX = [];
+		this.localZ = [];
 	}
 	createParticle(particle) {
         var rand1 = Math.random();
         var rand2 = Math.random();
-        var rand3 = Math.random();
-
 		this.planePos[0] = 0;
-		this.planePos[1] = 1;
-		this.planePos[2] = 2;
+		this.planePos[1] = 0;
+		this.planePos[2] = 0;
         vec3.add(this.planePos, this.planePos, this.emitterPos);
-		vec3.scale(this.planeX, this.planeX,(rand1*2-1));
-		vec3.scale(this.planeZ, this.planeZ, (rand2*2-1));
-		vec3.add(this.planePos, this.planePos, this.planeX);
-		vec3.add(this.planePos, this.planePos, this.planeX);
-
+		vec3.scale(this.localX, this.planeX, (rand1*2-1));
+		vec3.scale(this.localZ, this.planeZ, (rand2*2-1));
+		vec3.add(this.planePos, this.planePos, this.localX);
+		vec3.add(this.planePos, this.planePos, this.localZ);
 		particle.spawn(this.planePos, zero);
 	}
 
@@ -384,10 +395,10 @@ Additional Parameters:
 **/
 class SphereEmitter extends Emitter {
 	constructor(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
-	direction=[0,0,0], particleSize=0.01, fuzziness=0, startColor, finalColor, particleProto, radius, impulse = 0) {
+	direction=[0,0,0], particleSize=0.01, fuzziness=0, startColor, finalColor, particleProto, timeScaling, radius, impulse = 0) {
 
 		super(emitterPos, partsPerSec, maxLifeTime, mass, direction,
-			particleSize, fuzziness, startColor, finalColor, particleProto);
+			particleSize, fuzziness, startColor, finalColor, particleProto, timeScaling);
 		this.radius = radius;
 		this.impulse = impulse;
 
@@ -423,14 +434,14 @@ class SphereEmitter extends Emitter {
 class CircleEmitter extends PlaneEmitter {
 	constructor(emitterPos = [0,0,0], partsPerSec, maxLifeTime, mass=1,
 	direction=[0,0,0], particleSize=0.01, fuzziness=0, startColor, finalColor,
-	particleProto, planeX=[1,0,0], planeZ=[0,0,1], radius, impulse = 0) {
+	particleProto, timeScaling, planeX=[1,0,0], planeZ=[0,0,1], radius, impulse = 0) {
 
 		vec3.normalize(planeX, planeX);
 		vec3.normalize(planeZ, planeZ);
 
 		super(emitterPos, partsPerSec, maxLifeTime, mass,
 		direction, particleSize, fuzziness, startColor,
-		finalColor, particleProto, planeX, planeZ);
+		finalColor, particleProto, timeScaling, planeX, planeZ);
 
 		this.radius = radius;
 		this.impulse = impulse;
@@ -526,12 +537,28 @@ class FireParticle extends Particle {
 		this.camDistance = -1;
 		vec3.copy(this.force, this.emitter.forceToApply);
 		if(this.emitter.planeWidth) { //if a planeemitter is used, lifetime of particle depends on distance from origin
-			var centerDistance = vec3.distance(this.emitter.emitterPos, this.pos);
+			var centerDistance = vec3.distance(this.pos, this.emitter.emitterPos);
 			this.lifeTime = this.emitter.maxLifeTime*(1-centerDistance/this.emitter.planeWidth);
 			this.time = this.lifeTime;
 		} else {
 			this.lifeTime = this.emitter.maxLifeTime;
 			this.time = this.lifeTime;
 		}
+	}
+}
+
+class FuzzyParticle extends Particle {
+
+	constructor(emitter) {
+		super(emitter);
+		this.randVec = vec3.copy([], zero);
+	}
+
+	spawn(pos, velocity) {
+		super.spawn(pos, velocity);
+		this.randVec[0] = Math.random()*2-1;
+		this.randVec[1] = Math.random()*2-1;
+		this.randVec[2] = Math.random()*2-1;
+		vec3.add(this.velocity, this.velocity, this.randVec);
 	}
 }

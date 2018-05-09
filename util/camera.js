@@ -1,4 +1,5 @@
 var startPos = [-30, 5, 0];
+var deltaPos = [0, 0, 0];
 //object bundling all data and operation needed for camera animation
 var camera = {
     pos:vec3.copy([], startPos),
@@ -19,15 +20,15 @@ var camera = {
         var sensitivity = 0.005;
         //translation
         if(this.movingForward) {
-            vec3.add(this.pos, this.pos, vec3.scale([], this.direction, timer.delta*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale(deltaPos, this.direction, timer.delta*sensitivity));
         } else if(this.movingBackward) {
-            vec3.add(this.pos, this.pos, vec3.scale([], this.direction, -timer.delta*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale(deltaPos, this.direction, -timer.delta*sensitivity));
         }
 
         if(this.movingLeft) {
-            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.up, this.direction), timer.delta*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale(deltaPos, vec3.cross([], this.up, this.direction), timer.delta*sensitivity));
         } else if(this.movingRight) {
-            vec3.add(this.pos, this.pos, vec3.scale([], vec3.cross([], this.direction, this.up), timer.delta*sensitivity));
+            vec3.add(this.pos, this.pos, vec3.scale(deltaPos, vec3.cross([], this.direction, this.up), timer.delta*sensitivity));
         }
 
         //rotation using euler angles

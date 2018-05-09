@@ -6,11 +6,11 @@ var shaderProgram1 = null;
 var shaderProgram2 = null;
 var shaderProgram3 = null;
 
+
 var canvasWidth = 1300;
 var canvasHeight = 650;
 var aspectRatio = canvasWidth / canvasHeight;
 
-var ext;
 //camera and projection settings
 
 
@@ -125,14 +125,13 @@ var scenegraph;
  */
 function init(resources) {
     //create a GL context
-    gl = createContext(canvasWidth, canvasHeight);
-
-    ext = gl.getExtension("ANGLE_instanced_arrays");
+    gl = createWebGL2Context(canvasWidth, canvasHeight);
     //in WebGL / OpenGL3 we have to create and use our own shaders for the programmable pipeline
     //create the shader program
     shaderProgram1 = new ShaderProgram(resources.vs1, resources.fs);
     shaderProgram2 = new ShaderProgram(resources.vs2, resources.fs);
     shaderProgram3 = new ShaderProgram(resources.vs3, resources.fs2);
+
 
     //set attributes and uniforms that aren't shared by shaders
     shaderProgram1.colorLocation = gl.getAttribLocation(shaderProgram1.program, "a_color");
@@ -156,6 +155,7 @@ function init(resources) {
     shaderProgram3.vortexFactorLocation = gl.getUniformLocation(shaderProgram3.program, "u_vortexFactor");
     shaderProgram3.numVortexLocation = gl.getUniformLocation(shaderProgram3.program, "u_numVorteces");
     shaderProgram3.dampeningLocation = gl.getUniformLocation(shaderProgram3.program, "u_dampening");
+    shaderProgram3.timeScaleLocation = gl.getUniformLocation(shaderProgram3.program, "u_timeScaling");
 
     initCubeBuffer();
     house = resources.house;
@@ -163,19 +163,20 @@ function init(resources) {
 
     //TEST
     var testEmitter1= new PlaneEmitter([0,0,5], 1000, 2000, 0.01, [0.0,2,0], 0.07,
-        0.01, [1,0,0,1], [0.9, 0.7, 0.3, 1], new Particle(null), [3,0,0], [0,0,1]);
+        0.01, [1,0,0,1], [0.9, 0.7, 0.3, 1], new FireParticle(null), 1, [1,0,0], [0,0,1]);
     var testEmitter2 = new SphereEmitter([-2.93,4.694, -0.85], 2000, 2000, 0.0001, [0,1,0], 0.08,
-        0.001, [0.3,0.3,0.3,1], [1, 1, 1, 1], new Particle(null), 0.3, 1);
-    var testEmitter3 = new CircleEmitter([500, 100, 0], 10000, 3000, 0.0001, [0,0,0], 3,
-        0.01, [0.02,0.05,0.5,1], [0.7, 0.1, 0.5, 1], new Particle(null), [0,0,1], [0,1,0], 75, 1.0);
+        0.050, [0.1,0.1,0.1,0.8], [1, 1, 1, 0], new Particle(null), 1, 0.3, 1);
+    var testEmitter3 = new CircleEmitter([500, 100, 0], 5000, 5000, 0.0001, [0,0,0], 3,
+        0.01, [0.02,0.05,0.5,1], [0.7, 0.1, 0.5, 1], new Particle(null), 1, [0,0,1], [0,1,0], 70, 1.0);
     //TEST
-    var testEmitter4= new PlaneEmitter([0,10,0], 1000, 1000, 0.03, [0.0,-0.6,0], 0.07,
-        0.01, [1,1,1,1], [1, 1, 1, 1], new Particle(null), [20,0,0], [0,0,20]);
+    var testEmitter4= new PlaneEmitter([0,10,0], 1000, 10000, 0.03, [0.0,-0.6,0], 0.07,
+        0.01, [1,1,1,1], [1, 1, 1, 1], new FuzzyParticle(null), 1, [20,0,0], [0,0,20]);
 
     // testSystem.addEmitter(testEmitter1);
     testSystem.addEmitter(testEmitter2);
-    testSystem.addEmitter(testEmitter3);
+    // testSystem.addEmitter(testEmitter3);
     // testSystem.addEmitter(testEmitter4);
+    // testSystem.enableTurbulence();
 
     var shader1Node = sg.shader(shaderProgram1.program);
     var shader2Node = sg.shader(shaderProgram2.program);
@@ -227,7 +228,9 @@ function render(timeInMilliseconds) {
     //clear the buffer
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     //enable depth test to let objects in front occluse objects further away
-    gl.enable(gl.DEPTH_TEST);
+    gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     //base matrices to be applied to all objects
     var projectionMatrix = [];
@@ -237,16 +240,17 @@ function render(timeInMilliseconds) {
     mat4.lookAt(viewMatrix, camera.pos, vec3.add([], camera.pos, camera.direction), camera.up);
     mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 1, 2000);
 
-    var context = createSGContext(gl, projectionMatrix);
-    context.viewMatrix = viewMatrix;
-    scenegraph.render(context);
 
     //update
     update();
 
     //render
-    testSystem.render(viewMatrix, sceneMatrix, projectionMatrix);
 
+    var context = createSGContext(gl, projectionMatrix);
+    context.viewMatrix = viewMatrix;
+    scenegraph.render(context);
+
+    testSystem.render(viewMatrix, sceneMatrix, projectionMatrix);
     gl.useProgram(shaderProgram2.program);
     shaderProgram2.setProjectionMat(projectionMatrix);
     renderHouse(mat4.identity([]), viewMatrix);
@@ -274,7 +278,7 @@ function renderRobot(sceneMatrix, viewMatrix) {
   gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
   gl.vertexAttribPointer(shaderProgram1.colorLocation, 3, gl.FLOAT, false,0,0) ;
   gl.enableVertexAttribArray(shaderProgram1.colorLocation);
-  ext.vertexAttribDivisorANGLE(shaderProgram1.colorLocation, 0);    //this is IMPORTANT -- even though we don't use it
+  gl.vertexAttribDivisor(shaderProgram1.colorLocation, 0);    //this is IMPORTANT -- even though we don't use it
 
   // store current sceneMatrix in originSceneMatrix, so it can be restored
   var originSceneMatrix = []
@@ -312,7 +316,9 @@ loadResources({
   vs2: "shader/nocolorshader.vs.glsl",
   vs3: "shader/particleShader.vs.glsl",
   fs2: "shader/particleShader.fs.glsl",
-  house: "../models/house.obj"
+  house: "../models/house.obj",
+  updateVS: "shader/particleUpdate.vs.glsl",
+  noop: "shader/noop.fs.glsl"
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
 

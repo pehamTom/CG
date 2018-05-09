@@ -35,9 +35,9 @@ void main() {
       continue;
     }
     vec3 vortexDist = a_centerPos-u_vortexPos[i];
-    vec3 tempVel = length(u_angularVel[i])*normalize(cross(u_angularVel[i], vortexDist));
+    vec3 tempVel = normalize(cross(u_angularVel[i], vortexDist));
     float radius = length(vortexDist);
-    float inverseSquare = 1.0/(1.0+vortexDist.x*vortexDist.x+vortexDist.y*vortexDist.y+vortexDist.z*vortexDist.z);
+    float inverseSquare = 1.0/(1.0+radius*radius);
     tempVel *= inverseSquare * u_vortexFactor[i]; //factor by inverse square distance
     vortexVel += tempVel;
   }

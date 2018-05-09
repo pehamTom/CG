@@ -7,7 +7,7 @@ function setArrayBufferFloat(buffer, bufferLoc, numElems) {
 
 function setArrayBufferFloatInstanced(buffer, bufferLoc, numElems, numInstances) {
     setArrayBufferFloat(buffer, bufferLoc, numElems);
-    ext.vertexAttribDivisorANGLE(bufferLoc, numInstances);
+    gl.vertexAttribDivisor(bufferLoc, numInstances);
 }
 
 function setupStaticArrayBuffer(bufferData) {
@@ -35,8 +35,8 @@ function setDynamicArrayBufferData(buffer, data) {
 }
 
 //shader class
-function ShaderProgram(vs, fs) {
-    this.program = createProgram(gl, vs, fs);
+function ShaderProgram(vs, fs, varyings) {
+    this.program = createTransformFeedbackProgram(gl, vs, fs, varyings);
 
     this.modelViewLoc = gl.getUniformLocation(this.program, 'u_modelView');
     this.projectionLocation = gl.getUniformLocation(this.program, 'u_projection');
@@ -51,4 +51,40 @@ function ShaderProgram(vs, fs) {
         mat4.mul(modelViewMatrix, viewMatrix, sceneMatrix);
         gl.uniformMatrix4fv(this.modelViewLoc, false, modelViewMatrix);
     }
+}
+
+/**
+ * creates a program by the given vertex and fragment shader
+ * @param gl GL context
+ * @param vertex vertex shader or code
+ * @param fragment fragment shader or code
+ * @returns {WebGLProgram}
+ */
+function createTransformFeedbackProgram(gl, vertex, fragment, varyings) {
+  var program = gl.createProgram();
+  gl.attachShader(program, typeof vertex === 'string' ? createShader(gl, vertex, gl.VERTEX_SHADER) : vertex);
+  gl.attachShader(program, typeof fragment === 'string' ? createShader(gl, fragment, gl.FRAGMENT_SHADER) : fragment);
+  if(varyings != null) {
+      gl.transformFeedbackVaryings(program, varyings, gl.SEPARATE_ATTRIBS);
+  }
+  gl.linkProgram(program);
+  var linked = gl.getProgramParameter(program, gl.LINK_STATUS);
+  if (!linked) {
+    // something went wrong with the link
+    var lastError = gl.getProgramInfoLog(program);
+    console.error('Error in program linking:' + lastError);
+    gl.deleteProgram(program);
+    return null;
+  }
+  return program;
+}
+
+
+function createWebGL2Context(width, height) {
+  var canvas = document.createElement('canvas');
+  canvas.width = width || 400;
+  canvas.height = height || 400;
+  document.body.appendChild(canvas);
+  createHtmlText(canvas)
+  return canvas.getContext('webgl2');
 }
