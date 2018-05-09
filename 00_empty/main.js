@@ -174,8 +174,8 @@ function init(resources) {
 
     // testSystem.addEmitter(testEmitter1);
     testSystem.addEmitter(testEmitter2);
-    // testSystem.addEmitter(testEmitter3);
-    // testSystem.addEmitter(testEmitter4);
+    testSystem.addEmitter(testEmitter3);
+    testSystem.addEmitter(testEmitter4);
     // testSystem.enableTurbulence();
 
     var shader1Node = sg.shader(shaderProgram1.program);

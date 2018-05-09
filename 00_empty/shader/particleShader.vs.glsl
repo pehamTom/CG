@@ -16,7 +16,7 @@ uniform vec3 u_generalDirection;
 uniform vec4 u_color;
 uniform vec4 u_finalColor;
 uniform vec3 u_camRight;
-uniform vec3 u_timeScaling;
+uniform float u_timeScaling;
 
 uniform vec3 u_vortexPos[10];
 uniform vec3 u_angularVel[10];
@@ -43,6 +43,7 @@ void main() {
   }
 
   vec3 billboardedVert = a_centerPos + u_camRight*a_position.x + vec3(0.0, 1, 0.0) * a_position.y;
+  billboardedVert *= u_timeScaling;
   vec3 movement = a_velocity*time + vortexVel*time + a_force*time*time/(u_mass+0.00000001) + u_generalDirection*time-vec3(0.0,gravity < 0.0 ? 0.0 : gravity,0);
   movement *= (1.0-u_dampening*(time/(a_lifeTime/1000.0)));
   gl_Position = u_projection * u_modelView
