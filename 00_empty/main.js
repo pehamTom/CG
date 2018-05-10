@@ -109,6 +109,10 @@ document.addEventListener("keyup", function(event) {
         case "d": {
             camera.movingRight = false;
         } break;
+        case "F":
+        case "f":{
+            camera.isFree = !camera.isFree;
+        } break;
 
     }
 });
@@ -206,6 +210,15 @@ function init(resources) {
     //setup list of updatable objects
     updateQueue.push(camera);
     updateQueue.push(testSystem);
+
+
+    cameraAnimator.addRotation(0,180,0,1);
+    cameraAnimator.addRotation(0,180,0,1);
+    cameraAnimator.addLocation([100,0,0],10);
+    cameraAnimator.addLocation([-100,0,0],10);
+    cameraAnimator.startRotating();
+    cameraAnimator.startMoving();
+    updateQueue.push(cameraAnimator);
 }
 
 function initCubeBuffer() {
@@ -228,7 +241,7 @@ function render(timeInMilliseconds) {
     //clear the buffer
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     //enable depth test to let objects in front occluse objects further away
-    gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
@@ -243,7 +256,6 @@ function render(timeInMilliseconds) {
 
     //update
     update();
-
     //render
 
     var context = createSGContext(gl, projectionMatrix);
@@ -317,8 +329,8 @@ loadResources({
   vs3: "shader/particleShader.vs.glsl",
   fs2: "shader/particleShader.fs.glsl",
   house: "../models/house.obj",
-  updateVS: "shader/particleUpdate.vs.glsl",
-  noop: "shader/noop.fs.glsl"
+  //updateVS: "shader/particleUpdate.vs.glsl",
+  //noop: "shader/noop.fs.glsl"
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
 
