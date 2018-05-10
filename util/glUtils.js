@@ -88,3 +88,106 @@ function createWebGL2Context(width, height) {
   createHtmlText(canvas)
   return canvas.getContext('webgl2');
 }
+
+
+//convenience function for drawing a unit cube with specified color
+function cubeRenderer(color) {
+    let s = 0.5;
+
+    var cubeVertices = new Float32Array([
+       -s,-s,-s, s,-s,-s, s, s,-s, -s, s,-s,
+       -s,-s, s, s,-s, s, s, s, s, -s, s, s,
+       -s,-s,-s, -s, s,-s, -s, s, s, -s,-s, s,
+       s,-s,-s, s, s,-s, s, s, s, s,-s, s,
+       -s,-s,-s, -s,-s, s, s,-s, s, s,-s,-s,
+       -s, s,-s, -s, s, s, s, s, s, s, s,-s,
+    ]);
+
+    var cubeColors = new Float32Array([
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3],
+       color[0],color[1],color[2],color[3]
+    ]);
+
+    var cubeIndices =  new Float32Array([
+       0,1,2, 0,2,3,
+       4,5,6, 4,6,7,
+       8,9,10, 8,10,11,
+       12,13,14, 12,14,15,
+       16,17,18, 16,18,19,
+       20,21,22, 20,22,23
+    ]);
+
+    var cubeVertexBuffer, cubeColorBuffer, cubeIndexBuffer;
+
+    function init() {
+        cubeVertexBuffer = setupStaticArrayBuffer(cubeVertices);
+
+        cubeColorBuffer = setupStaticArrayBuffer(cubeColors);
+
+        cubeIndexBuffer = setUpStaticElementBuffer(new Uint16Array(cubeIndices));
+    }
+    return function(context) {
+        if(cubeVertexBuffer == null) {
+            init();
+        }
+        let shader = context.shader;
+        let gl = context.gl;
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexBuffer);
+        let positionLoc = gl.getAttribLocation(shader, "a_position");
+        gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false,0,0) ;
+        gl.enableVertexAttribArray(positionLoc);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
+        let colorLoc = gl.getAttribLocation(shader, "a_color");
+        gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false,0,0) ;
+        gl.enableVertexAttribArray(colorLoc);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIndexBuffer);
+        gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0); //LINE_STRIP
+    }
+}
+
+class NoAllocRenderSGNode extends RenderSGNode {
+    constructor(renderer, children) {
+        super(renderer, children)
+        this.modelView = mat4.create();
+        this.normalMatrix = mat4.create();
+    }
+
+    setTransformationUniforms(context) {
+        //set matrix uniforms
+        mat4.multiply(this.modelView, context.viewMatrix, context.sceneMatrix);
+        mat3.normalFromMat4(this.normalMatrix, this.modelView);
+        const projectionMatrix = context.projectionMatrix;
+        const gl = context.gl,
+          shader = context.shader;
+        gl.uniformMatrix4fv(gl.getUniformLocation(shader, 'u_modelView'), false, this.modelView);
+        gl.uniformMatrix3fv(gl.getUniformLocation(shader, 'u_normalMatrix'), false, this.normalMatrix);
+        gl.uniformMatrix4fv(gl.getUniformLocation(shader, 'u_projection'), false, projectionMatrix);
+    }
+}
+
+class timeDependent

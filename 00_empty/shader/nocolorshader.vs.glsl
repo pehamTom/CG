@@ -6,11 +6,11 @@
 // the position of the point
 attribute vec3 a_position;
 
-varying vec3 v_color;
+varying vec4 v_color;
 
 uniform mat4 u_modelView;
 uniform mat4 u_projection;
-uniform vec3 u_color;
+uniform vec4 u_color;
 uniform mat3 u_normalMatrix;
 
 //like a C program main is the main function

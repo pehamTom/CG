@@ -15,7 +15,6 @@ var aspectRatio = canvasWidth / canvasHeight;
 
 
 var cubeVertexBuffer, cubeColorBuffer, cubeIndexBuffer;
-var houseVertexBuffer, houseIndexBuffer; //TEST
 
 var s = 0.3; //size of cube
 var cubeVertices = new Float32Array([
@@ -28,12 +27,12 @@ var cubeVertices = new Float32Array([
 ]);
 
 var cubeColors = new Float32Array([
-   0,1,1, 0,1,1, 0,1,1, 0,1,1,
-   1,0,1, 1,0,1, 1,0,1, 1,0,1,
-   1,0,0, 1,0,0, 1,0,0, 1,0,0,
-   0,0,1, 0,0,1, 0,0,1, 0,0,1,
-   1,1,0, 1,1,0, 1,1,0, 1,1,0,
-   0,1,0, 0,1,0, 0,1,0, 0,1,0
+   0,1,1,1, 0,1,1,1, 0,1,1,1, 0,1,1,1,
+   1,0,1,1, 1,0,1,1, 1,0,1,1, 1,0,1,1,
+   1,0,0,1, 1,0,0,1, 1,0,0,1, 1,0,0,1,
+   0,0,1,1, 0,0,1,1, 0,0,1,1, 0,0,1,1,
+   1,1,0,1, 1,1,0,1, 1,1,0,1, 1,1,0,1,
+   0,1,0,1, 0,1,0,1, 0,1,0,1, 0,1,0,1
 ]);
 
 var cubeIndices =  new Float32Array([
@@ -45,7 +44,8 @@ var cubeIndices =  new Float32Array([
    20,21,22, 20,22,23
 ]);
 
-var house; //TEST
+var house;
+var chimney;
 
 //TEST
 var testSystem = new ParticleSystem();
@@ -159,44 +159,143 @@ function init(resources) {
 
     initCubeBuffer();
     house = resources.house;
-    initHouseBuffer();
+    chimney = resources.chimney;
 
     //TEST
-    var testEmitter1= new PlaneEmitter([0,0,5], 1000, 2000, 0.01, [0.0,2,0], 0.07,
-        0.01, [1,0,0,1], [0.9, 0.7, 0.3, 1], new FireParticle(null), 1, [1,0,0], [0,0,1]);
-    var testEmitter2 = new SphereEmitter([-2.93,4.694, -0.85], 2000, 2000, 0.0001, [0,1,0], 0.08,
-        0.050, [0.1,0.1,0.1,0.8], [1, 1, 1, 0], new Particle(null), 1, 0.3, 1);
-    var testEmitter3 = new CircleEmitter([500, 100, 0], 5000, 5000, 0.0001, [0,0,0], 3,
+    var testEmitter1= new PlaneEmitter([0,0,5], 2000, 1000, 0.01, [0.0,1.3,0], 0.05,
+        0.01, [1,0,0,1], [1, 0.7, 0.3, 0.9], new FireParticle(null), 0.4, [.5,0,0], [0,0,.5]);
+    var testEmitter2 = new SphereEmitter([1.5, 7.17818, 4.215], 1000, 2000, 0.0001, [0,1,0], 0.08,
+        0.050, [0.0,0.0,0.0,1.0], [0.8, 0.8, 0.8, 0.1], new Particle(null), 1, 0.3, 1);
+    var testEmitter3 = new CircleEmitter([500, 100, 0], 1000, 5000, 0.0001, [0,0,0], 3,
         0.01, [0.02,0.05,0.5,1], [0.7, 0.1, 0.5, 1], new Particle(null), 1, [0,0,1], [0,1,0], 70, 1.0);
     //TEST
     var testEmitter4= new PlaneEmitter([0,10,0], 1000, 10000, 0.03, [0.0,-0.6,0], 0.07,
-        0.01, [1,1,1,1], [1, 1, 1, 1], new FuzzyParticle(null), 1, [20,0,0], [0,0,20]);
+        0.01, [1,1,1,1], [1, 1, 1, 1], new FuzzyParticle(null), 0, [20,0,0], [0,0,20]);
 
-    // testSystem.addEmitter(testEmitter1);
-    testSystem.addEmitter(testEmitter2);
-    testSystem.addEmitter(testEmitter3);
-    testSystem.addEmitter(testEmitter4);
-    // testSystem.enableTurbulence();
+    updateQueue.push(testEmitter1);
+    updateQueue.push(testEmitter2);
+    // updateQueue.push(testEmitter3);
+    updateQueue.push(testEmitter4);
 
     var shader1Node = sg.shader(shaderProgram1.program);
     var shader2Node = sg.shader(shaderProgram2.program);
-    var shader3Node = sg.shader(ShaderProgram.program);
+    var shader3Node = sg.shader(shaderProgram3.program);
 
     //setup scenegraph
-    scenegraph = new SGNode([shader2Node, shader1Node]);
+    scenegraph = new SGNode([shader3Node, shader2Node, shader1Node]);
 
+
+    shader3Node.push(new NoAllocRenderSGNode(emitterRenderer(testEmitter1)));
+    shader3Node.push(new RenderSGNode(emitterRenderer(testEmitter2)));
+    // shader3Node.push(new RenderSGNode(emitterRenderer(testEmitter3)));
+    shader3Node.push(new RenderSGNode(emitterRenderer(testEmitter4)));
     //setup ground plane
-    node = new SetUniformSGNode("u_color", [0.9,0.9,0.9]);
+    node = new SetUniformSGNode("u_color", [0.9,0.9,0.9, 1.0]);
     node = shader2Node.push(node);
-    node = node.push(sg.rotateX(90));
+    node = node.push(sg.rotateX(-90));
     node.push(sg.drawRect(100, 100));
 
-    //setup house
-    node =  new SetUniformSGNode("u_color", [0.4,0.2,0]);
+    //setup moon
+    node = new SetUniformSGNode("u_color", [1,1,0.6, 1.0]);
     node = shader2Node.push(node);
-    // node = node.push(sg.translate(0,0.7,0));
-    // node = node.push(sg.scale(0.7, 0.7, 0.7));
+    node = node.push(sg.translate(-70, 50, 0));
+    node.push(sg.drawSphere(10, 30, 30));
+
+    //setup house
+    node =  new SetUniformSGNode("u_color", [0.6,0.6,0.6, 1.0]);
+    let houseNode = node;
+    node = shader2Node.push(node);
     node.push(sg.draw(house));
+
+    //setup chimney relative to house
+    node = houseNode.push( new SetUniformSGNode("u_color", [0.9,0.6,0.6, 1.0]));
+    node = node.push(sg.translate(0, 0, 5));
+    node = node.push(sg.rotateY(90));
+    node = node.push(sg.scale(0.5, 0.5, 0.5));
+    node.push(sg.draw(chimney));
+
+    let chimneyNode = node.push(sg.shader(shaderProgram1.program));
+    let scaleNode = sg.scale(0.6, 0.16, 0.16);
+    //logs for fire relative to chimney
+    node = chimneyNode;
+    node = node.push(sg.translate(0.3, 0.5, 0));
+    node = node.push(sg.rotateY(180));
+    node = node.push(sg.rotateZ(45));
+    node = node.push(scaleNode);
+    node.push(new RenderSGNode(cubeRenderer([0.4,0.2,0,1])));
+
+    node=chimneyNode;
+    node = node.push(sg.translate(0, 0.5, 0.2));
+    node = node.push(sg.rotateY(-90));
+    node = node.push(sg.rotateZ(-45));
+    node = node.push(scaleNode);
+    node.push(new RenderSGNode(cubeRenderer([0.4,0.2,0,1])));
+
+    node=chimneyNode;
+    node = node.push(sg.translate(0, 0.5, -0.2));
+    node = node.push(sg.rotateY(90));
+    node = node.push(sg.rotateZ(-45));
+    node = node.push(scaleNode);
+    node.push(new RenderSGNode(cubeRenderer([0.4,0.2,0,1])));
+    //end logs for fire
+
+    //setup table relative to houseNode
+    node = houseNode.push(new SetUniformSGNode("u_color", [0.81,0.909,0.1882, 1.0]));
+    node = node.push(sg.translate(-2.5, 0, -1.5));
+    node = node.push(sg.scale(0.3, 0.3, 0.3));
+    node = node.push(sg.rotateY(90));
+    node = node.push(new RenderSGNode(resources.table));
+
+    //setup windows relative to house
+    let windowBaseNode = houseNode.push(sg.shader(shaderProgram1.program));
+    node = windowBaseNode.push(sg.translate(1.99791, 1.41766, 5.78689));
+    let windowNode = sg.scale(1.9979, 0.69084, 0.05); //window is the same only translation and rotation changes
+    node = node.push(windowNode);
+    let renderWindowNode = new RenderSGNode(cubeRenderer([0.9, 0.9, 0.9, 0.1]));
+    node = node.push(renderWindowNode);
+    //windowbar 1
+    node = windowNode.push(sg.rotateZ(90));
+    scaleNode = sg.scale(0.1, 1, 1.2);
+    node = node.push(scaleNode);
+    node = node.push(new RenderSGNode(cubeRenderer([0.4,0.2,0,1])));
+    //windowbar2
+    node = windowNode.push(scaleNode);
+    node = node.push(new RenderSGNode(cubeRenderer([0.4,0.2,0,1])));
+
+    //window2
+    node = windowBaseNode.push(sg.translate(-1.99791, 1.41766, 5.78689));
+    node.push(windowNode);
+    //window3
+    node = windowBaseNode.push(sg.translate(1.99791, 1.41766, -5.78689));
+    node.push(windowNode);
+    //window4
+    node = windowBaseNode.push(sg.translate(-1.99791, 1.41766, -5.78689));
+    node.push(windowNode);
+
+    //window4
+    node = windowBaseNode.push(sg.translate(-3.95, 1.41766, 2.17008));
+    node = node.push(sg.rotateY(90));
+    node = node.push(sg.scale(4.34017, 0.69084, 0.05));
+    windowNode.children.forEach(function(child) {
+        node.push(child);
+    });
+
+    //window5
+    node = windowBaseNode.push(sg.translate(-3.95, 1.41766, -3.61681));
+    let rotateNode = node.push(sg.rotateY(90));
+    node = rotateNode.push(sg.scale(1.44672, 0.69084, 0.05));
+    windowNode.children.forEach(function(child) {
+        node.push(child);
+    });
+
+    //window6
+    node = windowBaseNode.push(sg.translate(3.95, 1.41766, 2.17008));
+    node.push(rotateNode);
+
+    //window7
+    node = windowBaseNode.push(sg.translate(3.95, 1.41766, -0.72336));
+    node.push(rotateNode);
+
 
     //setup list of resettable objects
     resetQueue.push(timer);
@@ -228,7 +327,7 @@ function render(timeInMilliseconds) {
     //clear the buffer
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     //enable depth test to let objects in front occluse objects further away
-    gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
@@ -250,15 +349,6 @@ function render(timeInMilliseconds) {
     context.viewMatrix = viewMatrix;
     scenegraph.render(context);
 
-    testSystem.render(viewMatrix, sceneMatrix, projectionMatrix);
-    gl.useProgram(shaderProgram2.program);
-    shaderProgram2.setProjectionMat(projectionMatrix);
-    renderHouse(mat4.identity([]), viewMatrix);
-
-    gl.useProgram(shaderProgram1.program);
-    shaderProgram1.setProjectionMat(projectionMatrix);
-    renderRobot(sceneMatrix, viewMatrix);
-
     camera.animatedAngle = timer.elapsed/1000;
     //request another render call as soon as possible
     requestAnimationFrame(render);
@@ -276,7 +366,7 @@ function renderRobot(sceneMatrix, viewMatrix) {
   gl.enableVertexAttribArray(shaderProgram1.positionLocation);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
-  gl.vertexAttribPointer(shaderProgram1.colorLocation, 3, gl.FLOAT, false,0,0) ;
+  gl.vertexAttribPointer(shaderProgram1.colorLocation, 4, gl.FLOAT, false,0,0) ;
   gl.enableVertexAttribArray(shaderProgram1.colorLocation);
   gl.vertexAttribDivisor(shaderProgram1.colorLocation, 0);    //this is IMPORTANT -- even though we don't use it
 
@@ -317,8 +407,8 @@ loadResources({
   vs3: "shader/particleShader.vs.glsl",
   fs2: "shader/particleShader.fs.glsl",
   house: "../models/house.obj",
-  updateVS: "shader/particleUpdate.vs.glsl",
-  noop: "shader/noop.fs.glsl"
+  chimney: "../models/chimney.obj",
+  table: "../models/table.obj"
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
 
@@ -326,30 +416,6 @@ loadResources({
   render();
 });
 
-//TEST
-function initHouseBuffer() {
-    houseVertexBuffer = gl.createBuffer();
-    houseVert = new Float32Array(house.position);
-    gl.bindBuffer(gl.ARRAY_BUFFER, houseVertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, houseVert, gl.STATIC_DRAW);
-
-    houseIndexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, houseIndexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(house.index), gl.STATIC_DRAW);
-}
-
-//TEST
-function renderHouse(viewMatrix, originSceneMatrix) {
-    var tempSceneMat = mat4.translate([], originSceneMatrix, [0, 2, 0]);
-    tempSceneMat = mat4.scale(tempSceneMat, tempSceneMat, [0.2, 0.2, 0.2]);
-    shaderProgram2.setupModelView(viewMatrix, tempSceneMat);
-    gl.bindBuffer(gl.ARRAY_BUFFER, houseVertexBuffer);
-    gl.vertexAttribPointer(shaderProgram2.positionLocation, 3, gl.FLOAT, false,0,0);
-    gl.enableVertexAttribArray(shaderProgram2.positionLocation);
-
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, houseIndexBuffer);
-    gl.drawElements(gl.TRIANGLES, house.index.length, gl.UNSIGNED_SHORT, 0);
-}
 
 //reset all state
 function reset() {

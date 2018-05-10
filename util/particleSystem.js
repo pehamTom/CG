@@ -1,5 +1,32 @@
 var zero = [0,0,0];
 
+function emitterRenderer(emitter) {
+	var em = emitter;
+	return function(context) {
+		var gl = context.gl;
+		var shader = context.shader;
+		gl.useProgram(shader); //shaderProgram3 is the particle shaderprogram
+		//set uniforms
+        gl.uniform1f(shaderProgram3.massLocation, em.mass);
+        gl.uniform4fv(shaderProgram3.colorLocation, em.quadColors);
+        gl.uniform4fv(shaderProgram3.finalColorLocation, em.finalColors);
+        gl.uniform3fv(shaderProgram3.generalDirLocation, em.direction);
+		gl.uniform1f(shaderProgram3.dampeningLocation, em.dampening);
+		gl.uniform1f(shaderProgram3.timeScaleLocation, em.timeScaling);
+		vec3.cross(em.camRight, camera.direction, camera.up);
+		gl.uniform3fv(shaderProgram3.camRightLocation, em.camRight);
+
+        setArrayBufferFloat(em.quadBuffer, shaderProgram3.positionLoc, 3); //render all vertices per instance
+
+		setArrayBufferFloatInstanced(em.posbuffer, shaderProgram3.centerLocation, 3, 1);
+        setArrayBufferFloatInstanced(em.timesBuffer, shaderProgram3.timeLocation, 1, 1);
+		setArrayBufferFloatInstanced(em.velocitysBuffer, shaderProgram3.velocityLocation, 3, 1);
+		setArrayBufferFloatInstanced(em.lifeTimesBuffer, shaderProgram3.lifeTimeLocation, 1, 1);
+		setArrayBufferFloatInstanced(em.forcesBuffer, shaderProgram3.forceLocation, 3, 1);
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, em.numParticles);
+	}
+}
+
 class ParticleSystem {
 	constructor() {
 		this.emitter = [];
@@ -171,7 +198,7 @@ class Emitter {
 	      0.5*particleSize, 0.5*particleSize, 0.0]);
 
 		//set max size of the particlebuffer
-	    this.maxNumPart = partsPerSec*maxLifeTime/1000;
+	    this.maxNumPart = 10*partsPerSec*maxLifeTime/1000;
 
 		this.emitterPos = emitterPos;
 	    this.partsPerSec = partsPerSec;
@@ -202,7 +229,7 @@ class Emitter {
 		this.forces=new Float32Array(this.maxNumPart*3);
 
 		//local state variables
-	    this.numPart = 0;
+	    this.numParticles = 0;
 		this.lastusedParticle = 0;
 		for(var i = 0; i < this.maxNumPart; i++) {
 			this.particleBuffer[i] = new particleProto.constructor(this);
@@ -228,7 +255,8 @@ class Emitter {
 		}
 		for(var i = 0; i < partsToSpawn; i++) { //cycle through buffer from last known position and spawn new particles
 			this.createParticle(this.particleBuffer[this.lastusedParticle]); //use "abstract" create function
-            this.lastusedParticle = (this.lastusedParticle+1)%this.maxNumPart;
+
+			this.lastusedParticle = (this.lastusedParticle+1)%this.maxNumPart;
         }
 		let p = null;
 		this.numParticles = 0;
@@ -244,21 +272,21 @@ class Emitter {
 
 					// copy values to gpu buffers
 					p.force = this.forceToApply;
-					this.positions[i*3] = p.pos[0];
-					this.positions[i*3+1] = p.pos[1];
-					this.positions[i*3+2] = p.pos[2];
-					this.velocitys[i*3] = p.velocity[0];
-					this.velocitys[i*3+1] = p.velocity[1];
-					this.velocitys[i*3+2] = p.velocity[2];
-					this.partTimes[i] = p.time;
-					this.lifeTimes[i] = p.lifeTime;
-					this.forces[i*3] = p.force[0];
-					this.forces[i*3+1] = p.force[1];
-					this.forces[i*3+2] = p.force[2];
+					this.positions[this.numParticles*3] = p.pos[0];
+					this.positions[this.numParticles*3+1] = p.pos[1];
+					this.positions[this.numParticles*3+2] = p.pos[2];
+					this.velocitys[this.numParticles*3] = p.velocity[0];
+					this.velocitys[this.numParticles*3+1] = p.velocity[1];
+					this.velocitys[this.numParticles*3+2] = p.velocity[2];
+					this.partTimes[this.numParticles] = p.time;
+					this.lifeTimes[this.numParticles] = p.lifeTime;
+					this.forces[this.numParticles*3] = p.force[0];
+					this.forces[this.numParticles*3+1] = p.force[1];
+					this.forces[this.numParticles*3+2] = p.force[2];
+					this.numParticles++;
 	            } else {
 					p.camDistance = -1; //TODO:if particle is dead make sure its at the end of the buffer after sorting
 				}
-				this.numParticles++;
 			}
         }
 
@@ -298,32 +326,30 @@ class Emitter {
 	}
 
     render(viewMatrix, sceneMatrix, projectionMatrix) {
-        gl.useProgram(shaderProgram3.program); //shaderProgram3 is the particle shaderprogram
-
-		//set uniforms
-        gl.uniformMatrix4fv(shaderProgram3.projectionLocation, false, projectionMatrix);
-        gl.uniform1f(shaderProgram3.massLocation, this.mass);
-        gl.uniform4fv(shaderProgram3.colorLocation, this.quadColors);
-        gl.uniform4fv(shaderProgram3.finalColorLocation, this.finalColors);
-        gl.uniform3fv(shaderProgram3.generalDirLocation, this.direction);
-		gl.uniform1f(shaderProgram3.dampeningLocation, this.dampening);
-		gl.uniform1f(shaderProgram3.timeScaleLocation, this.timeScaling);
-
-		vec3.cross(this.camRight, camera.direction, camera.up);
-		gl.uniform3fv(shaderProgram3.camRightLocation, this.camRight);
-
-        shaderProgram3.setupModelView(viewMatrix, sceneMatrix);
-
-
-        setArrayBufferFloat(this.quadBuffer, shaderProgram3.positionLoc, 3); //render all vertices per instance
-
-		setArrayBufferFloatInstanced(this.posbuffer, shaderProgram3.centerLocation, 3, 1);
-        setArrayBufferFloatInstanced(this.timesBuffer, shaderProgram3.timeLocation, 1, 1);
-		setArrayBufferFloatInstanced(this.velocitysBuffer, shaderProgram3.velocityLocation, 3, 1);
-		setArrayBufferFloatInstanced(this.lifeTimesBuffer, shaderProgram3.lifeTimeLocation, 1, 1);
-		setArrayBufferFloatInstanced(this.forcesBuffer, shaderProgram3.forceLocation, 3, 1);
-
-        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.numParticles);
+        // gl.useProgram(shaderProgram3.program); //shaderProgram3 is the particle shaderprogram
+		//
+		// //set uniforms
+        // gl.uniformMatrix4fv(shaderProgram3.projectionLocation, false, projectionMatrix);
+        // gl.uniform1f(shaderProgram3.massLocation, this.mass);
+        // gl.uniform4fv(shaderProgram3.colorLocation, this.quadColors);
+        // gl.uniform4fv(shaderProgram3.finalColorLocation, this.finalColors);
+        // gl.uniform3fv(shaderProgram3.generalDirLocation, this.direction);
+		// gl.uniform1f(shaderProgram3.dampeningLocation, this.dampening);
+		// gl.uniform1f(shaderProgram3.timeScaleLocation, this.timeScaling);
+		// vec3.cross(this.camRight, camera.direction, camera.up);
+		// gl.uniform3fv(shaderProgram3.camRightLocation, this.camRight);
+		//
+        // shaderProgram3.setupModelView(viewMatrix, sceneMatrix);
+		//
+		//
+        // setArrayBufferFloat(this.quadBuffer, shaderProgram3.positionLoc, 3); //render all vertices per instance
+		//
+		// setArrayBufferFloatInstanced(this.posbuffer, shaderProgram3.centerLocation, 3, 1);
+        // setArrayBufferFloatInstanced(this.timesBuffer, shaderProgram3.timeLocation, 1, 1);
+		// setArrayBufferFloatInstanced(this.velocitysBuffer, shaderProgram3.velocityLocation, 3, 1);
+		// setArrayBufferFloatInstanced(this.lifeTimesBuffer, shaderProgram3.lifeTimeLocation, 1, 1);
+		// setArrayBufferFloatInstanced(this.forcesBuffer, shaderProgram3.forceLocation, 3, 1);
+        // gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.numParticles);
     }
 
 	reset(){
@@ -339,13 +365,6 @@ class Emitter {
 		this.forceState = this.forceStates.apply;
 	}
 
-	spawnVortex(pos, angularVel, size, time) {
-		vec3.copy(this.pos, pos);
-		vec3.copy(this.angularVel, angularVel);
-		vec3.copy(this.vortexSize, size);
-		this.vortexTime = 0;
-		this.vortexLifeTime = time; //prevent 0 division
-	}
 }
 
 
@@ -366,7 +385,7 @@ class PlaneEmitter extends Emitter {
 		//local plane coordinate system
 	    this.planeX = planeX;
 	    this.planeZ = planeZ;
-		this.planeWidth = vec3.distance(this.emitterPos, vec3.add([], this.planeX, this.planeZ)); //just for caching the value
+		this.planeWidth = vec3.distance(this.emitterPos, vec3.add([], this.emitterPos, vec3.add([], this.planeX, this.planeZ))); //just for caching the value
 		this.planePos = [];
 		this.localX = [];
 		this.localZ = [];
@@ -446,7 +465,6 @@ class CircleEmitter extends PlaneEmitter {
 		this.radius = radius;
 		this.impulse = impulse;
 
-		this.localX = new Float32Array(zero);
 		this.localX = [0, 0, 0];
 		this.localZ = [0, 0, 0];
 		this.circlePoint = [0, 0, 0];
@@ -538,7 +556,7 @@ class FireParticle extends Particle {
 		vec3.copy(this.force, this.emitter.forceToApply);
 		if(this.emitter.planeWidth) { //if a planeemitter is used, lifetime of particle depends on distance from origin
 			var centerDistance = vec3.distance(this.pos, this.emitter.emitterPos);
-			this.lifeTime = this.emitter.maxLifeTime*(1-centerDistance/this.emitter.planeWidth);
+			this.lifeTime = this.emitter.maxLifeTime*(1-centerDistance*2/this.emitter.planeWidth);
 			this.time = this.lifeTime;
 		} else {
 			this.lifeTime = this.emitter.maxLifeTime;
