@@ -109,6 +109,10 @@ document.addEventListener("keyup", function(event) {
         case "d": {
             camera.movingRight = false;
         } break;
+        case "F":
+        case "f":{
+            camera.isFree = !camera.isFree;
+        } break;
 
     }
 });
@@ -305,6 +309,15 @@ function init(resources) {
     //setup list of updatable objects
     updateQueue.push(camera);
     updateQueue.push(testSystem);
+
+
+    cameraAnimator.addRotation(0,180,0,1);
+    cameraAnimator.addRotation(0,180,0,1);
+    cameraAnimator.addLocation([100,0,0],10);
+    cameraAnimator.addLocation([-100,0,0],10);
+    cameraAnimator.startRotating();
+    cameraAnimator.startMoving();
+    updateQueue.push(cameraAnimator);
 }
 
 function initCubeBuffer() {
@@ -342,7 +355,6 @@ function render(timeInMilliseconds) {
 
     //update
     update();
-
     //render
 
     var context = createSGContext(gl, projectionMatrix);
