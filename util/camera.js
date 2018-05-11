@@ -15,6 +15,7 @@ var camera = {
     deltaX:0,
     deltaY:0,
     animatedAngle:0,
+    rightVec: [0,0,0],
     fov:glMatrix.toRadian(30),
 
     isFree: true,
@@ -97,9 +98,13 @@ freeMovement:function(){
   }
 
   if(this.movingLeft) {
-      vec3.add(this.pos, this.pos, vec3.scale(deltaPos, vec3.cross([], this.up, this.direction), timer.delta*sensitivity));
+      vec3.cross(this.rightVec, this.up, this.direction);
+      vec3.normalize(this.rightVec, this.rightVec);
+      vec3.add(this.pos, this.pos, vec3.scale(deltaPos, this.rightVec, timer.delta*sensitivity));
   } else if(this.movingRight) {
-      vec3.add(this.pos, this.pos, vec3.scale(deltaPos, vec3.cross([], this.direction, this.up), timer.delta*sensitivity));
+      vec3.cross(this.rightVec, this.direction, this.up);
+      vec3.normalize(this.rightVec, this.rightVec);
+      vec3.add(this.pos, this.pos, vec3.scale(deltaPos,this.rightVec, timer.delta*sensitivity));
   }
 
   //rotation using euler angles

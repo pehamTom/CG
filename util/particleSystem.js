@@ -580,3 +580,10 @@ class FuzzyParticle extends Particle {
 		vec3.add(this.velocity, this.velocity, this.randVec);
 	}
 }
+
+var ps = {
+	createSnowEmitter: function(pos, length, width, maxLifeTime) {
+		return new PlaneEmitter(pos, 200, maxLifeTime, 0.03, [0.0,-3.5,0], 0.07,
+	        0.01, [1,1,1,1], [1, 1, 1, 1], new FuzzyParticle(null), 0, [length,0,0], [0,0,width]);
+	}
+}

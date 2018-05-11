@@ -292,3 +292,89 @@ class NoAllocRenderSGNode extends RenderSGNode {
         gl.uniformMatrix4fv(gl.getUniformLocation(shader, 'u_projection'), false, projectionMatrix);
     }
 }
+/**
+  *Scenegraph node for transformations that should change with time
+  *@param calcMatrixFunc function that takes no parameters and returns a matrix
+  */
+class AnimationSGNode extends SGNode {
+    constructor(calcMatrixFunc, children) {
+        super(children);
+        this.calcMatrix = calcMatrixFunc;
+        this.transForm = mat4.create(); //cache so no new matrix is allocated
+    }
+
+    render(context) {
+        var previous = context.sceneMatrix;
+
+        if(previous === null) {
+            context.sceneMatrix = this.calcMatrix();
+        } else {
+            context.sceneMatrix = mat4.multiply(this.transForm, previous, this.calcMatrix());
+        }
+
+        super.render(context);
+        context.sceneMatrix = previous;
+    }
+}
+
+var doorAnimator = function(endTime) {
+    var endTime = endTime;
+    var elapsed = 0;
+    var rotateQuat = quat.rotateY([], quat.create(), Math.PI/2);
+    var beginQuat = quat.create();
+    var trans3 = glm.translate(3.98, 0.89952, -3.61681);
+    var interpolatedQuat = quat.create();
+    var trans1 = glm.translate(0, 0, 0.72335);
+    var trans2 = glm.translate(0, 0, -0.72235);
+    var rotate = mat4.create();
+    var transForm = mat4.create();
+    var animate = false;
+    timeEventQueue.push({timeStamp: 10000, fire: function(){ animate = true}});
+
+    resetQueue.push({reset: function() {
+        elapsed = 0;
+        rotateQuat = quat.rotateY([], quat.create(), Math.PI/2);
+        beginQuat = quat.create();
+        animate = false;
+    }});
+    function reverse() {
+        const h = beginQuat;
+        beginQuat = rotateQuat;
+        rotateQuat = h;
+        elapsed = 0;
+    };
+
+    return function() {
+        if(! animate) return trans3;
+        elapsed += timer.delta;
+        let t = elapsed / endTime;
+        if(t > 1 ) {
+            reverse()
+            t = 0;
+        };
+        quat.slerp(interpolatedQuat, beginQuat, rotateQuat, t);
+        mat4.fromQuat(rotate, interpolatedQuat);
+        mat4.copy(transForm, identityMat);
+        mat4.multiply(transForm, transForm, trans3);
+        mat4.multiply(transForm, transForm, trans2);
+        mat4.multiply(transForm, transForm, rotate);
+        mat4.multiply(transForm, transForm, trans1);
+        return transForm;
+    }
+}
+
+var identityMat = mat4.create();
+
+/**
+*returns matrix that performs rotation around points*/
+let cachedMat = [];
+let cachedVec = [];
+function rotateAroundPoint(point, rad, rotation){
+    let transForm = mat4.copy(cachedMat, identityMat);
+    let transVec = vec3.copy(cachedVec, point);
+
+    mat4.translate(transForm, transForm, point);
+    mat4.rotate(transForm, transForm, rad, rotation);
+    mat4.translate(transForm, transForm, vec3.negate(transVec, transVec));
+    return transForm;
+}
