@@ -195,6 +195,9 @@ function init(resources) {
     node = node.push(sg.rotateX(-90));
     node.push(sg.drawRect(100, 100));
 
+
+    initDeer(shader1Node);
+
     //setup moon
     node = new SetUniformSGNode("u_color", [1,1,0.6, 1.0]);
     node = shader2Node.push(node);
@@ -364,14 +367,151 @@ function init(resources) {
     updateQueue.push(camera);
 
 
-    cameraAnimator.addRotation(0,180,0,1);
+    cameraAnimator.addRotation(0,180,0,10);
     cameraAnimator.addRotation(0,180,0,1);
     cameraAnimator.addLocation([100,0,0],10);
     cameraAnimator.addLocation([-100,0,0],10);
     cameraAnimator.startRotating();
     cameraAnimator.startMoving();
+
+    //camera.lookAt([0,0,0]);
+    //camera.rotateBy(0,0,-20,1);
+    camera.rotationPoint = [0,0,0];
+    vec3.add(camera.pos, camera.pos, [-10,0,0]);
+    //fcameraAnimator.startMoving();
+    //camera.isFree = false;
     updateQueue.push(cameraAnimator);
 }
+
+var deerBodyVertexBuffer;
+var deerBodyIndexBuffer;
+function initDeer(parent){
+    var deer;
+    var body;
+    var brown = [.6,.3,.1,1];
+    var temp;
+    //Deer
+
+
+    deer = parent.push(sg.translate(0,1.7,0))
+    deer = deer.push(sg.rotateX(0));
+    //body
+    deerBodyVertexBuffer = setupStaticArrayBuffer(deerBodyVertices);
+    deerBodyIndexBuffer = setUpStaticElementBuffer(deerBodyIndices);
+
+    body = deer.push(sg.translate(0,0,0));
+    temp = body.push(sg.rotateY(90));
+    temp = temp.push(sg.scale(1.3,1.3,1.3));
+    temp = temp.push(sg.shader(shaderProgram2.program));
+    temp = temp.push(new SetUniformSGNode("u_color", brown));
+    temp = temp.push(new NoAllocRenderSGNode(function(context){
+       gl.bindBuffer(gl.ARRAY_BUFFER, deerBodyVertexBuffer);
+       var loc = gl.getAttribLocation(context.shader, "a_position");
+
+       gl.vertexAttribPointer(loc, 3, gl.FLOAT, false,0,0) ;
+       gl.enableVertexAttribArray(loc);
+
+       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, deerBodyIndexBuffer);
+       gl.drawElements(gl.TRIANGLES, deerBodyIndices.length,gl.UNSIGNED_SHORT, 0);
+
+    }));
+    temp = temp.push(sg.shader(shaderProgram1.program));
+    //neck
+    temp = body.push(sg.translate(0.35,0.9,0.35));
+    temp = temp.push(sg.rotateX(-40));
+    //temp = temp.push(sg.shader(shaderProgram2.program))
+    node = temp.push(sg.scale(.25,.25,.5));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    //node.push(new NoAllocRenderSGNode(cylinderRenderer()));
+
+    //head
+
+    deerHeadVertexBuffer = setupStaticArrayBuffer(deerHeadVertices);
+    deerHeadIndexBuffer  = setUpStaticElementBuffer(deerHeadIndices);
+
+    temp = body.push(sg.translate(0,1,.40));
+    temp = temp.push(sg.rotateX(30));
+    temp = temp.push(sg.scale(1.5,1.5,1.5));
+    temp = temp.push(new NoAllocRenderSGNode(function(context){
+       gl.bindBuffer(gl.ARRAY_BUFFER, deerHeadVertexBuffer);
+       var loc = gl.getAttribLocation(context.shader, "a_position");
+
+       gl.vertexAttribPointer(loc, 3, gl.FLOAT, false,0,0) ;
+       gl.enableVertexAttribArray(loc);
+
+       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, deerHeadIndexBuffer);
+       gl.drawElements(gl.TRIANGLES, deerHeadIndices.length,gl.UNSIGNED_SHORT, 0);
+
+    }));
+    
+    // right front leg
+    temp = body.push(sg.translate(0,.1,0));
+    temp = temp.push(sg.rotateX(2));
+    node = temp.push(sg.scale(0.25,0.8,0.3));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    temp = temp.push(sg.translate(0,-0.7,-0.05));
+    temp = temp.push(sg.rotateX(15));
+    node = temp.push(sg.scale(.15,1.,.15));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    temp = temp.push(sg.translate(0,-.5,.05));
+    temp = temp.push(sg.rotateX(-10));
+    node = temp.push(sg.scale(.2,0.1,.3));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    //left front leg
+    temp = body.push(sg.translate(0.7,.1,0));
+    temp = temp.push(sg.rotateX(2));
+    node = temp.push(sg.scale(0.25,0.8,0.3));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    temp = temp.push(sg.translate(0,-0.7,-0.05));
+    temp = temp.push(sg.rotateX(15));
+    node = temp.push(sg.scale(.15,1.,.15));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    temp = temp.push(sg.translate(0,-.5,.05));
+    temp = temp.push(sg.rotateX(-10));
+    node = temp.push(sg.scale(.2,0.1,.3));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    //right hind leg
+    temp = body.push(sg.translate(0,.25,-1.7));
+    temp = temp.push(sg.rotateX(-20));
+    node = temp.push(sg.scale(.2,.7,.6));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    temp = temp.push(sg.translate(0,-0.3,-0.1));
+    temp = temp.push(sg.rotateX(-20));
+    node = temp.push(sg.scale(.2,.2,1));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    temp = temp.push(sg.translate(0,-.4,-.5));
+    temp = temp.push(sg.rotateX(100));
+    node = temp.push(sg.scale(.15,.15,0.95));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    temp = temp.push(sg.translate(0,.1,.5));
+    temp = temp.push(sg.rotateX(30));
+    node = temp.push(sg.scale(.15,.25,.1));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    //left hind leg
+    temp = body.push(sg.translate(0.7,.25,-1.7));
+    temp = temp.push(sg.rotateX(-20));
+    node = temp.push(sg.scale(.2,.7,.6));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    temp = temp.push(sg.translate(0,-0.3,-0.1));
+    temp = temp.push(sg.rotateX(-20));
+    node = temp.push(sg.scale(.2,.2,1));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    temp = temp.push(sg.translate(0,-.4,-.5));
+    temp = temp.push(sg.rotateX(100));
+    node = temp.push(sg.scale(.15,.15,0.95));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    temp = temp.push(sg.translate(0,.1,.5));
+    temp = temp.push(sg.rotateX(30));
+    node = temp.push(sg.scale(.15,.25,.1));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+
+    //tail
+    temp = body.push(sg.translate(0.45,.8,-2.));
+    temp = temp.push(sg.rotateX(60));
+    node = temp.push(sg.scale(.1,.1,.1));
+    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+}
+
 /**
  * render one frame
  */
