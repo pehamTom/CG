@@ -1,4 +1,4 @@
-var startPos = [-3, 1, 0];
+var startPos = [1, 2, 0];
 var deltaPos = [0, 0, 0];
 //object bundling all data and operation needed for camera animation
 var camera = {
@@ -29,15 +29,15 @@ var camera = {
     moveToTime:0 ,
 
 update: function(){
-    if(this.isFree){
-      this.freeMovement();
-    }else{
+      if(this.isFree){
+          this.freeMovement();
+      }else{
       //performe quaternion rotation
-      if(this.rotationDuration != 0){
+      if(this.rotationDuration > 0){
         this.updateRotation();
       }
       //performe linear movement
-      if(this.moveToDuration != 0){
+      if(this.moveToDuration > 0){
         this.updatePosition();
       }
     }
@@ -210,31 +210,33 @@ var cameraAnimator = {
     this.numberOfLocations++;
   },
   update: function(){
-    if(this.isRotating){
-      this.rTime += timer.delta;
-      if(this.rTime >= this.rDurations[this.currentRotation] * 1000){
-        this.rTime = 0;
-        this.currentRotation ++;
-        if(this.currentRotation >= this.numberOfRotations)
-        {
-          this.currentRotation = 0;
-        }
-        var rotation = this.rotations[this.currentRotation];
-        camera.rotateBy(rotation[0],rotation[1],rotation[2],this.rDurations[this.currentRotation]);
-      }
-    }
-    if(this.isMoving){
-      this.lTime += timer.delta;
-      if(this.lTime >= this.lDurations[this.currentLocation] * 1000){
-        this.lTime = 0;
-        this.currentLocation++;
-        if(this.currentLocation >= this.numberOfLocations)
-        {
-          this.currentLocation = 0;
-        }
-        camera.moveTo(this.locations[this.currentLocation], this.lDurations[this.currentLocation]);
-      }
+    if(!camera.isFree){
 
+      if(this.isRotating){
+        this.rTime += timer.delta;
+        if(this.rTime >= this.rDurations[this.currentRotation] * 1000){
+          this.rTime = 0;
+          this.currentRotation ++;
+          if(this.currentRotation >= this.numberOfRotations)
+          {
+            this.currentRotation = 0;
+          }
+          var rotation = this.rotations[this.currentRotation];
+          camera.rotateBy(rotation[0],rotation[1],rotation[2],this.rDurations[this.currentRotation]);
+        }
+      }
+      if(this.isMoving){
+        this.lTime += timer.delta;
+        if(this.lTime >= this.lDurations[this.currentLocation] * 1000){
+          this.lTime = 0;
+          this.currentLocation++;
+          if(this.currentLocation >= this.numberOfLocations)
+          {
+            this.currentLocation = 0;
+          }
+          camera.moveTo(this.locations[this.currentLocation], this.lDurations[this.currentLocation]);
+        }
+      }
     }
 
   }

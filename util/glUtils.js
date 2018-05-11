@@ -170,6 +170,109 @@ function cubeRenderer(color) {
     }
 }
 
+function cylinderRenderer() {
+
+    var cylinderVertices = new Float32Array([
+      0,0,0
+      ,1.00	,0,0.00
+      ,0.98	,0,0.17
+      ,0.94	,0,0.34
+      ,0.87	,0,0.50
+      ,0.77	,0,0.64
+      ,0.64	,0,0.77
+      ,0.50	,0,0.87
+      ,0.34	,0,0.94
+      ,0.17	,0,0.98
+      ,0.00	,0,1.00
+      ,-0.17,0,	0.98
+      ,-0.34,0,	0.94
+      ,-0.50,0,	0.87
+      ,-0.64,0,	0.77
+      ,-0.77,0,	0.64
+      ,-0.87,0,	0.50
+      ,-0.94,0,	0.34
+      ,-0.98,0,	0.17
+      ,-1.00,0,	0.00
+      ,-0.98,0,	-0.17
+      ,-0.94,0,	-0.34
+      ,-0.87,0,	-0.50
+      ,-0.77,0,	-0.64
+      ,-0.64,0,	-0.77
+      ,-0.50,0,	-0.87
+      ,-0.34,0,	-0.94
+      ,-0.17,0,	-0.98
+      ,0.00	,0,-1.00
+      ,0.17	,0,-0.98
+      ,0.34	,0,-0.94
+      ,0.50	,0,-0.87
+      ,0.64	,0,-0.77
+      ,0.77	,0,-0.64
+      ,0.87	,0,-0.50
+      ,0.94	,0,-0.34
+      , 0.98,0,	-0.17
+
+    ]);
+    var cylinderIndices =  new Uint16Array([
+      ,0,2,1 ,0,3,2 ,0,4,3
+      ,0,5,4 ,0,6,5
+      ,0,7	,6
+      ,0,8	,7
+      ,0,9	,8
+      ,0,10,	9
+      ,0,11,	10
+      ,0,12,	11
+      ,0,13,	12
+      ,0,14,	13
+      ,0,15,	14
+      ,0,16,	15
+      ,0,17,	16
+      ,0,18,	17
+      ,0,19,	18
+      ,0,20,	19
+      ,0,21,	20
+      ,0,22,	21
+      ,0,23,	22
+      ,0,24,	23
+      ,0,25,	24
+      ,0,26,	25
+      ,0,27,	26
+      ,0,28,	27
+      ,0,29,	28
+      ,0,30,	29
+      ,0,31,	30
+      ,0,32,	31
+      ,0,33,	32
+      ,0,34, 33,
+      ,0,35,34,
+      ,0,36,35,
+      ,0,36,1
+
+    ]);
+
+    var cylinderVertexBuffer, cylinderIndexBuffer;
+
+    function init() {
+        cylinderVertexBuffer = setupStaticArrayBuffer(cylinderVertices);
+
+        cylinderIndexBuffer = setUpStaticElementBuffer(cylinderIndices);
+    }
+    return function(context) {
+        if(cylinderVertexBuffer == null) {
+            init();
+        }
+        let shader = context.shader;
+        let gl = context.gl;
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, cylinderVertexBuffer);
+        let positionLoc = gl.getAttribLocation(shader, "a_position");
+        gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false,0,0) ;
+        gl.enableVertexAttribArray(positionLoc);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cylinderIndexBuffer);
+        gl.drawElements(gl.TRIANGLES, cylinderIndices.length, gl.UNSIGNED_SHORT, 0);
+    }
+}
+
 class NoAllocRenderSGNode extends RenderSGNode {
     constructor(renderer, children) {
         super(renderer, children)
@@ -189,5 +292,3 @@ class NoAllocRenderSGNode extends RenderSGNode {
         gl.uniformMatrix4fv(gl.getUniformLocation(shader, 'u_projection'), false, projectionMatrix);
     }
 }
-
-class timeDependent
