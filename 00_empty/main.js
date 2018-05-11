@@ -203,7 +203,7 @@ function init(resources) {
     }));
 
     node = node.push(new AnimationSGNode(function() {
-        return glm.translate(-200, 30, 0);
+        return glm.translate(-200, 100, 0);
     }));
     node.push(sg.drawSphere(10, 30, 30));
 
@@ -223,29 +223,20 @@ function init(resources) {
     node = blackHole.push(sg.shader(shaderProgram3.program));
     node = node.push(new RenderSGNode(emitterRenderer(testEmitter3)));
 
-    //add circling stars
-    node = blackHole.push(new SetUniformSGNode("u_color", [1,1,1,1]));
-    node = node.push(new AnimationSGNode(function() {
-        return rotateAroundPoint([0,0,0], timer.elapsed*0.001, [0, 1, 0]);
-    }));
-    node = node.push(sg.translate(100, 0, 50));
-    node = node.push(sg.drawSphere(20, 30, 30));
 
-    node = blackHole.push(new SetUniformSGNode("u_color", [1,0,0,1]));
-    node = node.push(new AnimationSGNode(function() {
-        return rotateAroundPoint([0,0,0], timer.elapsed*0.002, [1, 1, 0]);
-    }));
-    node = node.push(sg.translate(0, 0, 100));
-    node = node.push(sg.drawSphere(10, 30, 30));
+    for(let i = 0; i < 50; i++) {
+        let rand = [Math.random(), Math.random(), Math.random()];
+        node = blackHole.push(new SetUniformSGNode("u_color", [rand[0],rand[1],rand[2],1]));
+        node = node.push(new AnimationSGNode(function() {
+            return rotateAroundPoint([0,0,0], timer.elapsed*0.001, rand);
+        }));
+        let sign1 = (Math.random()*2-1) < 0 ? -1 : 1;
+        let sign2 = (Math.random()*2-1) < 0 ? -1 : 1;
+        let sign3 = (Math.random()*2-1) < 0 ? -1 : 1;
 
-    node = blackHole.push(new SetUniformSGNode("u_color", [0,1,0,1]));
-    node = node.push(new AnimationSGNode(function() {
-        return rotateAroundPoint([0,0,0], timer.elapsed*0.001, [1, 0, 1]);
-    }));
-    node = node.push(sg.translate(0, -80, 80));
-    node = node.push(sg.drawSphere(15, 30, 30));
-
-
+        node = node.push(sg.translate(60*sign1+(Math.random()*2-1)*5, 60*sign2+(Math.random()*2-1)*5, 60*sign3+(Math.random()*2-1)*5));
+        node = node.push(sg.drawSphere(3+ Math.random()*3, 30, 30));
+    }
     //setup house
     node =  new SetUniformSGNode("u_color", [0.6,0.6,0.6, 1.0]);
     node = shader2Node.push(node);
