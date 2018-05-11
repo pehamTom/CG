@@ -93,6 +93,7 @@ document.addEventListener("wheel", function(event) {
 
 var updateQueue = []; //place objects that need to be updated in here
 var resetQueue = []; //place objects that can be resetted here
+var timeEventQueue = []; //register timestamp and event here
 var scenegraph;
 /**
  * initializes OpenGL context, compile shader, and load buffers
@@ -135,20 +136,28 @@ function init(resources) {
     chimney = resources.chimney;
 
     //TEST
-    var testEmitter1= new PlaneEmitter([0,0,5], 3000, 1000, 0.01, [0.0,1.3,0], 0.05,
+    var testEmitter1= new PlaneEmitter([0,0,5], 2000, 1000, 0.01, [0.0,1.3,0], 0.05,
         0.01, [1,0,0,1], [1, 0.7, 0.3, 0.9], new FireParticle(null), 0.7, [.5,0,0], [0,0,.5]);
-    var testEmitter2 = new SphereEmitter([1.5, 7.17818, 4.215], 3000, 3000, 0.0001, [0,1,0], 0.08,
+    var testEmitter2 = new SphereEmitter([1.5, 7.17818, 4.215], 1000, 3000, 0.0001, [0,1,0], 0.08,
         0.050, [0.0,0.0,0.0,1.0], [0.8, 0.8, 0.8, 0.1], new Particle(null), 1, 0.3, 1);
     var testEmitter3 = new CircleEmitter([0, 0, 0], 1000, 5000, 0.0001, [0,0,0], 3,
         0.01, [0.02,0.05,0.5,1], [0.7, 0.1, 0.5, 1], new Particle(null), 1, [1,0,0], [0,1,0], 70, 1.0);
     //TEST
-    var testEmitter4= new PlaneEmitter([0,10,0], 1000, 10000, 0.03, [0.0,-0.6,0], 0.07,
-        0.01, [1,1,1,1], [1, 1, 1, 1], new FuzzyParticle(null), 0, [20,0,0], [0,0,20]);
+    // var testEmitter4= new PlaneEmitter([0,10,0], 1000, 10000, 0.03, [0.0,-0.6,0], 0.07,
+    //     0.01, [1,1,1,1], [1, 1, 1, 1], new FuzzyParticle(null), 0, [20,0,0], [0,0,20]);
+
+    var testEmitter4 = ps.createSnowEmitter([20, 20, 0], 10, 10, 5000);
+    var testEmitter5 = ps.createSnowEmitter([-20, 20, 0], 10, 10, 5000);
+    var testEmitter6 = ps.createSnowEmitter([0, 20, 20], 10, 10, 5000);
+    var testEmitter7 = ps.createSnowEmitter([0, 20, -20], 10, 10, 5000);
 
     updateQueue.push(testEmitter1);
     updateQueue.push(testEmitter2);
     updateQueue.push(testEmitter3);
     updateQueue.push(testEmitter4);
+    updateQueue.push(testEmitter5);
+    updateQueue.push(testEmitter6);
+    updateQueue.push(testEmitter7);
 
     var shader1Node = sg.shader(shaderProgram1.program);
     var shader2Node = sg.shader(shaderProgram2.program);
@@ -167,7 +176,7 @@ function init(resources) {
 		x *= radius;
 		z *= radius;
         let centerDist = [x, 0, z];
-        vec3.scale(centerDist, centerDist, Math.random()*2-1);
+        vec3.scale(centerDist, centerDist, (Math.random()*2-1)*0.5);
         vec3.add(centerDist, [x, 0, z], centerDist);
         vec3.add(centerDist, centerDist, [20, 2, 20]);
         treeNode.push(new NoAllocRenderSGNode(billboardRenderer(centerDist, 2, 4, [0, 0.2, 0, 1])));
@@ -176,7 +185,9 @@ function init(resources) {
     shader3Node.push(new NoAllocRenderSGNode(emitterRenderer(testEmitter1)));
     shader3Node.push(new RenderSGNode(emitterRenderer(testEmitter2)));
     shader3Node.push(new RenderSGNode(emitterRenderer(testEmitter4)));
-    // shader3Node.push(new RenderSGNode(emitterRenderer(testEmitter3)));
+    shader3Node.push(new RenderSGNode(emitterRenderer(testEmitter5)));
+    shader3Node.push(new RenderSGNode(emitterRenderer(testEmitter6)));
+    shader3Node.push(new RenderSGNode(emitterRenderer(testEmitter7)));
 
     //setup ground plane
     node = new SetUniformSGNode("u_color", [0.9,0.9,0.9, 1.0]);
@@ -188,12 +199,11 @@ function init(resources) {
     node = new SetUniformSGNode("u_color", [1,1,0.6, 1.0]);
     node = shader2Node.push(node);
     node = node.push(new AnimationSGNode(function() {
-        return rotateAroundPoint([0,0,0], timer.elapsed*0.0001, [0, 1,0]);
-        // return glm.rotateY(timer.elapsed*0.01);
+        return rotateAroundPoint([0,-50,0], timer.elapsed*0.00001, [0, 1,0]);
     }));
 
     node = node.push(new AnimationSGNode(function() {
-        return glm.translate(-70, 50, 0);
+        return glm.translate(-200, 30, 0);
     }));
     node.push(sg.drawSphere(10, 30, 30));
 
@@ -202,7 +212,9 @@ function init(resources) {
     node = shader2Node.push(node);
     let beforeTrans = node;
     node = node.push(new AnimationSGNode(function() {
-        return glm.translate(blackHolePos[0], blackHolePos[1],blackHolePos[2]);
+        let t = Math.min(timer.elapsed/30000, 1);
+        let dist = vec3.lerp([], blackHolePos, [20, 50, -30], t);
+        return glm.translate(dist[0], dist[1], dist[2]);
     }));
     let blackHole = node;
     node.push(sg.drawSphere(70, 30, 30));
@@ -241,15 +253,20 @@ function init(resources) {
     node.push(sg.draw(house));
 
     //setup door relative to house
-    let doorNode = houseNode.push(new AnimationSGNode(doorAnimator(10000)));
+    let doorNode = houseNode.push(new AnimationSGNode(doorAnimator(3000)));
     node = doorNode.push(sg.scale(0.08, 1.72712,1.4467));
     node = node.push(sg.shader(shaderProgram1.program));
     node = node.push(new NoAllocRenderSGNode(cubeRenderer([0.4,0.2,0,1])));
 
-    //setup doorknob relative to door
+    //setup inside doorknob relative to door
     node = doorNode.push(new SetUniformSGNode("u_color", [1,1,0.6, 1.0]));
+    let doorknob = node;
     node = node.push(sg.translate(-0.1, 0, 0.6));
-    node = node.push(sg.drawSphere(0.05, 10, 10));
+    let knobSphere = node.push(sg.drawSphere(0.05, 10, 10));
+
+    //setup outside doorknob relative to door
+    node = doorknob.push(sg.translate(0.1, 0, 0.6));
+    node.push(knobSphere);
 
     //setup chimney relative to house
     node = houseNode.push( new SetUniformSGNode("u_color", [0.9,0.6,0.6, 1.0]));
@@ -285,10 +302,17 @@ function init(resources) {
 
     //setup table relative to houseNode
     node = houseNode.push(new SetUniformSGNode("u_color", [0.81,0.909,0.1882, 1.0]));
-    node = node.push(sg.translate(-2.5, 0, -1.5));
-    node = node.push(sg.scale(0.3, 0.3, 0.3));
+    node = node.push(sg.translate(-2.5, 0, 0));
+    node = node.push(sg.scale(0.3, 0.35, 0.3));
     node = node.push(sg.rotateY(90));
     node = node.push(new RenderSGNode(resources.table));
+
+    //setup chair relative to houseNode
+    node = houseNode.push(new SetUniformSGNode("u_color", [0.81,0.909,0.1882, 1.0]));
+    node = node.push(sg.translate(-1, 0, 0));
+    node = node.push(sg.scale(0.28, 0.28, 0.28));
+    // node = node.push(sg.rotateY(90));
+    node = node.push(new RenderSGNode(resources.chair));
 
     //setup windows relative to house
     let windowBaseNode = houseNode.push(sg.shader(shaderProgram1.program));
@@ -380,7 +404,6 @@ function render(timeInMilliseconds) {
     mat4.lookAt(viewMatrix, camera.pos, vec3.add([], camera.pos, camera.direction), camera.up);
     mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 1, 2000);
 
-
     //update
     update();
     //render
@@ -404,7 +427,8 @@ loadResources({
   fs2: "shader/particleShader.fs.glsl",
   house: "../models/house.obj",
   chimney: "../models/chimney.obj",
-  table: "../models/table.obj"
+  table: "../models/table.obj",
+  chair: "../models/chair.obj"
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
 
@@ -424,4 +448,8 @@ function update() {
     updateQueue.forEach(function(updatable) {
         updatable.update();
     })
+    timeEventQueue.forEach(function(e) {
+        if(timer.elapsed >= e.timeStamp)
+            e.fire();
+    });
 }

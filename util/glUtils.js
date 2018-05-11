@@ -226,9 +226,15 @@ var doorAnimator = function(endTime) {
     var trans2 = glm.translate(0, 0, -0.72235);
     var rotate = mat4.create();
     var transForm = mat4.create();
-    function reset() {
-        startTime = 0;
-    };
+    var animate = false;
+    timeEventQueue.push({timeStamp: 10000, fire: function(){ animate = true}});
+
+    resetQueue.push({reset: function() {
+        elapsed = 0;
+        rotateQuat = quat.rotateY([], quat.create(), Math.PI/2);
+        beginQuat = quat.create();
+        animate = false;
+    }});
     function reverse() {
         const h = beginQuat;
         beginQuat = rotateQuat;
@@ -237,6 +243,7 @@ var doorAnimator = function(endTime) {
     };
 
     return function() {
+        if(! animate) return trans3;
         elapsed += timer.delta;
         let t = elapsed / endTime;
         if(t > 1 ) {
