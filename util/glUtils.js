@@ -91,7 +91,7 @@ function createWebGL2Context(width, height) {
 
 
 //convenience function for drawing a unit cube with specified color
-function cubeRenderer(color) {
+function cubeRenderer() {
     let s = 0.5;
 
     var cubeVertices = new Float32Array([
@@ -103,32 +103,14 @@ function cubeRenderer(color) {
        -s, s,-s, -s, s, s, s, s, s, s, s,-s,
     ]);
 
-    var cubeColors = new Float32Array([
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3],
-       color[0],color[1],color[2],color[3]
-    ]);
+    var cubeNormals = new Float32Array([
+        0,0,-1, 0,0,-1, 0,0,-1, 0,0,-1,
+        0,0,1, 0,0,1, 0,0,1, 0,0,1,
+        -1,0,0, -1,0,0, -1,0,0, -1,0,0,
+        1,0,0, 1,0,0, 1,0,0, 1,0,0,
+        0,-1,0, 0,-1,0, 0,-1,0, 0,-1,0,
+        0,1,0, 0,1,0, 0,1,0, 0,1,0
+    ])
 
     var cubeIndices =  new Float32Array([
        0,1,2, 0,2,3,
@@ -139,12 +121,13 @@ function cubeRenderer(color) {
        20,21,22, 20,22,23
     ]);
 
-    var cubeVertexBuffer, cubeColorBuffer, cubeIndexBuffer;
+    var cubeVertexBuffer, cubeNormalBuffer, cubeIndexBuffer;
 
     function init() {
         cubeVertexBuffer = setupStaticArrayBuffer(cubeVertices);
 
-        cubeColorBuffer = setupStaticArrayBuffer(cubeColors);
+
+        cubeNormalBuffer = setupStaticArrayBuffer(cubeNormals);
 
         cubeIndexBuffer = setUpStaticElementBuffer(new Uint16Array(cubeIndices));
     }
@@ -155,15 +138,12 @@ function cubeRenderer(color) {
         let shader = context.shader;
         let gl = context.gl;
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexBuffer);
         let positionLoc = gl.getAttribLocation(shader, "a_position");
-        gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false,0,0) ;
-        gl.enableVertexAttribArray(positionLoc);
+        let normalLoc = gl.getAttribLocation(shader, "a_normal");
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
-        let colorLoc = gl.getAttribLocation(shader, "a_color");
-        gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false,0,0) ;
-        gl.enableVertexAttribArray(colorLoc);
+        setArrayBufferFloat(cubeVertexBuffer, positionLoc, 3);
+
+        setArrayBufferFloat(cubeNormalBuffer, normalLoc, 3);
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIndexBuffer);
         gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0); //LINE_STRIP
@@ -277,7 +257,7 @@ class NoAllocRenderSGNode extends RenderSGNode {
     constructor(renderer, children) {
         super(renderer, children)
         this.modelView = mat4.create();
-        this.normalMatrix = mat4.create();
+        this.normalMatrix = mat3.create();
     }
 
     setTransformationUniforms(context) {
@@ -285,8 +265,8 @@ class NoAllocRenderSGNode extends RenderSGNode {
         mat4.multiply(this.modelView, context.viewMatrix, context.sceneMatrix);
         mat3.normalFromMat4(this.normalMatrix, this.modelView);
         const projectionMatrix = context.projectionMatrix;
-        const gl = context.gl,
-          shader = context.shader;
+        const gl = context.gl;
+        const shader = context.shader;
         gl.uniformMatrix4fv(gl.getUniformLocation(shader, 'u_modelView'), false, this.modelView);
         gl.uniformMatrix3fv(gl.getUniformLocation(shader, 'u_normalMatrix'), false, this.normalMatrix);
         gl.uniformMatrix4fv(gl.getUniformLocation(shader, 'u_projection'), false, projectionMatrix);
@@ -377,4 +357,27 @@ function rotateAroundPoint(point, rad, rotation){
     mat4.rotate(transForm, transForm, rad, rotation);
     mat4.translate(transForm, transForm, vec3.negate(transVec, transVec));
     return transForm;
+}
+
+function initMaterialSGNode(material) {
+
+    mat = new MaterialSGNode();
+    mat.ambient = material.ambient;
+    mat.diffuse = material.diffuse;
+    mat.specular = material.specular;
+    mat.emission = material.emission;
+    mat.shininess = material.shininess;
+    return mat;
+}
+
+function Material(ambient, diffuse, specular, emission, shininess) {
+    this.ambient = ambient;
+    this.diffuse = diffuse;
+    this.specular = specular;
+    this.emission = emission;
+    this.shininess = shininess;
+}
+
+function constantColorMaterial(color) {
+    return new Material([0,0,0,1], [0,0,0,1], [0,0,0,1], color, 0);
 }
