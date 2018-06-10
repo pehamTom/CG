@@ -168,29 +168,10 @@ function init(resources) {
     // initDeer(node);
 
 
-    //setup moon
-    node = initMaterialSGNode(constantColorMaterial([1, 0.2, 0.1, 1]));
-    node = phongShaderNode.push(node);
-    node = node.push(new AnimationSGNode(function() {
-        return rotateAroundPoint([0,-50,0], timer.elapsed*0.00001, [0, 0, 1]);
-    }));
-
-    let trans3 = node.push(new AnimationSGNode(function() {
-        return glm.translate(-200, 30, 0);
-    }));
-    trans3.push(sg.drawSphere(10, 30, 30));
-
-	let moonLight = new LightSGNode([0, 0, 0]);
-	moonLight.ambient = [0.1, 0.1, 0.1, 1.0];
-	moonLight.diffuse = [1, 0.4, 0.1, 1.0];
-	moonLight.specular = [1, 0.4, 0.1, 1.0];
-	moonLight.uniform = 'u_light2';
-	node = trans3.push(sg.shader(phongShader));
-	node.push(moonLight);
-
     //setup black hole
     node = initMaterialSGNode(constantColorMaterial([0,0,0,1]));
     node = phongShaderNode.push(node);
+    node.push(new SetUniformSGNode("u_enableObjectTexture", false));
     let beforeTrans = node;
     node = node.push(new AnimationSGNode(function() {
         var endTime = 15000;
@@ -213,7 +194,7 @@ function init(resources) {
         }
     }()));
     let blackHole = node;
-    node.push(sg.drawSphere(70, 30, 30));
+    node.push(new NoAllocRenderSGNode(makeSphere(70, 30, 30)));
 
     //set particles emitted by black hole
     node = blackHole.push(sg.shader(particleShader));
@@ -230,9 +211,28 @@ function init(resources) {
         let sign3 = (Math.random()*2-1) < 0 ? -1 : 1;
 
         node = node.push(sg.translate(60*sign1+(Math.random()*2-1)*5, 60*sign2+(Math.random()*2-1)*5, 60*sign3+(Math.random()*2-1)*5));
-        node = node.push(sg.drawSphere(3+ Math.random()*3, 30, 30));
+        node = node.push(new NoAllocRenderSGNode(makeSphere(3+ Math.random()*3, 30, 30)));
     }
 
+    //setup moon
+    node = initMaterialSGNode(constantColorMaterial([1, 0.2, 0.1, 1]));
+    node = phongShaderNode.push(node);
+    node = node.push(new AnimationSGNode(function() {
+        return rotateAroundPoint([0,-50,0], timer.elapsed*0.00001, [0, 0, 1]);
+    }));
+
+    let trans3 = node.push(new AnimationSGNode(function() {
+        return glm.translate(-200, 30, 0);
+    }));
+    trans3.push(new NoAllocRenderSGNode(makeSphere(10, 30, 30)));
+
+	let moonLight = new LightSGNode([0, 0, 0]);
+	moonLight.ambient = [0.1, 0.1, 0.1, 1.0];
+	moonLight.diffuse = [1, 0.4, 0.1, 1.0];
+	moonLight.specular = [1, 0.4, 0.1, 1.0];
+	moonLight.uniform = 'u_light2';
+	node = trans3.push(sg.shader(phongShader));
+	node.push(moonLight);
 
 	//setup firelight
 	var fireLight  = new LightSGNode([0, 0.5, 5]);
@@ -249,7 +249,7 @@ function init(resources) {
 	tableLight.diffuse = [0.5, 0.5, 0.5, 1.0];
 	tableLight.uniform = "u_light2";
 	node = tableLight.push(initMaterialSGNode(constantColorMaterial([0.8, 0.8, 0.1, 1.0])));
-	node.push(sg.drawSphere(0.1, 30, 30));
+	node.push(new NoAllocRenderSGNode(makeSphere((0.1, 30, 30))));
 	// phongShaderNode.push(tableLight);
 
     //setup house
@@ -272,7 +272,7 @@ function init(resources) {
     node = doorNode.push(initMaterialSGNode(goldMaterial));
     let doorknob = node;
     node = node.push(sg.translate(-0.1, 0, 0.6));
-    let knobSphere = node.push(sg.drawSphere(0.05, 10, 10));
+    let knobSphere = node.push(new NoAllocRenderSGNode(makeSphere(0.05, 10, 10)));
 
     //setup outside doorknob relative to door
     node = doorknob.push(sg.translate(0.1, 0, 0.6));

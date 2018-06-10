@@ -271,6 +271,11 @@ class NoAllocRenderSGNode extends RenderSGNode {
         gl.uniformMatrix3fv(gl.getUniformLocation(shader, 'u_normalMatrix'), false, this.normalMatrix);
         gl.uniformMatrix4fv(gl.getUniformLocation(shader, 'u_projection'), false, projectionMatrix);
     }
+
+    render(context){
+        super.render(context);
+        gl.disableVertexAttribArray(gl.getAttribLocation(context.shader, "a_texCoord"));
+    }
 }
 /**
   *Scenegraph node for transformations that should change with time

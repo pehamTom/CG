@@ -104,7 +104,7 @@ function billboardRenderer(pos, width, height, color) {
         gl.vertexAttribPointer(normalLoc, 3, gl.FLOAT, false,0,0) ;
         gl.enableVertexAttribArray(normalLoc);
 
-		setArrayBufferFloat(texCoordBuffer, gl.getAttribLocation(shader, "a_texCoord"), 2);
+		setArrayBufferFloat(texCoordBuffer, texCoordLoc, 2);
 
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 	}
