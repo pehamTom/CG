@@ -14,47 +14,6 @@ var canvasWidth = 1300;
 var canvasHeight = 650;
 var aspectRatio = canvasWidth / canvasHeight;
 
-var lightWoodMaterial = new Material([.227,.1137,.0392,1],
-                                [0.43,0.223,0.0863,1],
-                                [0, 0, 0, 1],
-                                [0, 0, 0, 1],
-                                0);
-
-var darkWoodMaterial = new Material([.227,.1137,.0392,1],
-                                [.227,.1137,.0392,1],
-                                [0, 0, 0, 1],
-                                [0, 0, 0, 1],
-                                0);
-
-var goldMaterial = new Material([0.24725, 0.1995, 0.0745, 1],
-                                [0.75164, 0.60648, 0.22648, 1],
-                                [0.628281, 0.555802, 0.366065, 1],
-                                [0, 0, 0, 1],
-                                40);
-
-var stoneMaterial = new Material([0.3, 0.3, 0.3, 1],
-                                [0.7, 0.7, 0.7, 1],
-                                [0, 0, 0, 1],
-                                [0, 0, 0, 1],
-                                0);
-
-var snowMaterial = new Material([1, 1, 1, 1],
-								[1, 1, 1, 1],
-								[0, 0, 0, 1],
-								[0.2, 0.2, 0.2, 1],
-								0);
-
-var metalMaterial = new Material([0.1, 0.1, 0.1, 1.0],
-								[0.3, 0.3, 0.3, 1],
-								[1, 1, 1, 1],
-								[0, 0, 0, 1],
-								100);
-
-var glassMaterial = new Material([0, 0, 0, 0],
-								[0.9, 0.9, 0.9, 0.1],
-								[0.9, 0.9, 0.9, 0.1],
-								[0, 0, 0, 0],
-								40);
 var house;
 var chimney;
 
@@ -153,7 +112,6 @@ function init(resources) {
     cube = resources.cube;
 
 
-
     //TEST
     var fireEmitter= new PlaneEmitter([0,0,0], 3000, 1300, 0.01, [0.0,1.3,0], 0.05,
         0.01, [1,0,0,1], [1, 0.7, 0.3, 0.9], new FireParticle(null), 0.7, [.6,0,0], [0,0,.6]);
@@ -182,22 +140,6 @@ function init(resources) {
     //setup scenegraph
     scenegraph = new SGNode([particleShaderNode, colorShaderNode, constColorShaderNode, phongShaderNode]);
 
-    //spawn trees around circle
-    var treeNode = colorShaderNode;
-    for(let i = 0; i < 50; i++) {
-        let alpha = -Math.PI/2 + i*7*Math.PI/(4*50)
-        let radius = 10;
-        let x = Math.cos(alpha);
-		let z = Math.sin(alpha);
-		x *= radius;
-		z *= radius;
-        let centerDist = [x, 0, z];
-        vec3.scale(centerDist, centerDist, (Math.random()*2-1)*0.5);
-        vec3.add(centerDist, [x, 0, z], centerDist);
-        vec3.add(centerDist, centerDist, [20, 2, 20]);
-       treeNode.push(new NoAllocRenderSGNode(billboardRenderer(centerDist, 2, 4, [0, 0.2, 0, 1])));
-
-    }
 
     // particleShaderNode.push(new NoAllocRenderSGNode(emitterRenderer(fireEmitter)));
     // particleShaderNode.push(new RenderSGNode(emitterRenderer(smokeEmitter)));
@@ -209,8 +151,12 @@ function init(resources) {
 	//setup ground plane
     node = initMaterialSGNode(snowMaterial);
     phongShaderNode.push(node);
+    node = node.push(new SetUniformSGNode("u_enableObjectTexture", true));
+    node = node.push(new AdvancedTextureSGNode(resources.snowFloor));
     node = node.push(sg.rotateX(-90));
-    node.push(sg.drawRect(300, 300));
+    var rect = makeRect(300, 300);
+    rect.texture = [0, 0, 300, 0, 300, 300, 0, 300];
+    node.push(sg.draw(rect));
 
 
     node = colorShaderNode.push(sg.translate(10,0,10));
@@ -309,6 +255,7 @@ function init(resources) {
     //setup house
     node =  new initMaterialSGNode(lightWoodMaterial);
     node = phongShaderNode.push(node);
+    node = node.push(new SetUniformSGNode("u_enableObjectTexture", false));
     let houseNode = node;
 	node = node.push(sg.translate(2, 1.5, 0));
     node = phongShaderNode.push(fireLight);
@@ -435,6 +382,28 @@ function init(resources) {
     //window7
     node = windowBaseNode.push(sg.translate(3.95, 1.41766, -0.72336));
     node.push(rotateNode);
+
+
+    //spawn trees around circle
+    var treeNode = phongShaderNode;
+    treeNode = treeNode.push(new AdvancedTextureSGNode(resources.normalTree));
+    treeNode = treeNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
+    var trees = [];
+    for(let i = 0; i < 200; i++) {
+        let alpha = -Math.PI/2 + i*7*Math.PI/(4*50)
+        let radius = 50;
+        let x = Math.cos(alpha);
+		let z = Math.sin(alpha);
+		x *= radius;
+		z *= radius;
+        let centerDist = [x, 0, z];
+        vec3.scale(centerDist, centerDist, (Math.random()*2-1)*0.5);
+        vec3.add(centerDist, [x, 0, z], centerDist);
+        vec3.add(centerDist, centerDist, [0, 3.5, 0]);
+        trees.push(new Billboard(centerDist, 4.5, 7));
+    }
+
+    treeNode.push(new NoAllocRenderSGNode(ForestRenderer(trees)));
 
 
     //setup list of resettable objects
@@ -641,7 +610,11 @@ loadResources({
   chimney: "../models/chimney.obj",
   table: "../models/table.obj",
   chair: "../models/chair.obj",
-  cube: "../models/cube.obj"
+  cube: "../models/cube.obj",
+  snowyTree: "../textures/snowy_tree.png",
+  normalTree: "../textures/tree.png",
+  wood: "../textures/wood_plank.jpg",
+  snowFloor: "../textures/snow_floor.jpg"
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
 

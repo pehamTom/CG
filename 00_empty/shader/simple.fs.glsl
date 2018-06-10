@@ -6,6 +6,7 @@
 //need to specify how "precise" float should be
 precision mediump float;
 
+
 //interpolate argument between vertex and fragment shader
 varying vec4 v_color;
 

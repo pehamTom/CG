@@ -6,8 +6,10 @@ attribute float a_time;
 attribute vec3 a_velocity;
 attribute float a_lifeTime;
 attribute vec3 a_force;
+attribute vec2 a_texCoord;
 
 varying vec4 v_color;
+varying vec2 v_texCoord;
 
 uniform mat4 u_modelView;
 uniform mat4 u_projection;
@@ -54,5 +56,7 @@ void main() {
     * vec4((billboardedVert+movement), 1);
 
   vec4 interPolatedColor = mix(u_color, u_finalColor, time/(a_lifeTime/1000.0));
+
   v_color = interPolatedColor;
+  v_texCoord = a_texCoord;
 }

@@ -49,6 +49,8 @@ function emitterRenderer(emitter) {
 		//everything instanced and assumes a divisor of 1 for the normals
 		let normalLoc = gl.getAttribLocation(phongShader, 'a_normal')
 	    gl.vertexAttribDivisor(normalLoc, 0);
+		let texLoc = gl.getAttribLocation(phongShader, 'a_texCoord')
+	    gl.vertexAttribDivisor(texLoc, 0);
 	}
 }
 //
