@@ -90,6 +90,7 @@ function createWebGL2Context(width, height) {
 }
 
 
+//TODO: ADD TEXTURES
 //convenience function for drawing a unit cube with specified color
 function cubeRenderer() {
     let s = 0.5;

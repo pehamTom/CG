@@ -112,7 +112,6 @@ function init(resources) {
     cube = resources.cube;
 
 
-    //TEST
     var fireEmitter= new PlaneEmitter([0,0,0], 3000, 1300, 0.01, [0.0,1.3,0], 0.05,
         0.01, [1,0,0,1], [1, 0.7, 0.3, 0.9], new FireParticle(null), 0.7, [.6,0,0], [0,0,.6]);
     var smokeEmitter = new SphereEmitter([1.5, 7.17818, 4.215], 1000, 3000, 0.0001, [0,1,0], 0.08,
@@ -126,9 +125,9 @@ function init(resources) {
     var snowEmitter4 = ps.createSnowEmitter([0, 20, -20], 10, 10, 5000);
 
     updateQueue.push(fireEmitter);
-    // updateQueue.push(smokeEmitter);
+    updateQueue.push(smokeEmitter);
     updateQueue.push(blackHoleParticleEmitter);
-    // updateQueue.push(snowEmitter1);
+    updateQueue.push(snowEmitter1);
     // updateQueue.push(snowEmitter2);
     // updateQueue.push(snowEmitter3);
     // updateQueue.push(snowEmitter4);
@@ -142,8 +141,8 @@ function init(resources) {
 
 
     // particleShaderNode.push(new NoAllocRenderSGNode(emitterRenderer(fireEmitter)));
-    // particleShaderNode.push(new RenderSGNode(emitterRenderer(smokeEmitter)));
-    // particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter1)));
+    particleShaderNode.push(new RenderSGNode(emitterRenderer(smokeEmitter)));
+    particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter1)));
     // particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter2)));
     // particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter3)));
     // particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter4)));
@@ -252,6 +251,28 @@ function init(resources) {
 	node.push(new NoAllocRenderSGNode(makeSphere((0.1, 30, 30))));
 	// phongShaderNode.push(tableLight);
 
+    //spawn trees around circle
+    var treeNode = phongShaderNode;
+    treeNode = treeNode.push(new AdvancedTextureSGNode(resources.normalTree));
+    treeNode = treeNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
+    var trees = [];
+    for(let i = 0; i < 200; i++) {
+        let alpha = -Math.PI/2 + i*7*Math.PI/(4*50)
+        let radius = 50;
+        let x = Math.cos(alpha);
+		let z = Math.sin(alpha);
+		x *= radius;
+		z *= radius;
+        let centerDist = [x, 0, z];
+        vec3.scale(centerDist, centerDist, (Math.random()*2-1)*0.5);
+        vec3.add(centerDist, [x, 0, z], centerDist);
+        vec3.add(centerDist, centerDist, [0, 3.5, 0]);
+        trees.push(new Billboard(centerDist, 4.5, 7));
+    }
+
+    treeNode.push(new NoAllocRenderSGNode(ForestRenderer(trees)));
+
+
     //setup house
     node =  new initMaterialSGNode(lightWoodMaterial);
     node = phongShaderNode.push(node);
@@ -260,6 +281,11 @@ function init(resources) {
 	node = node.push(sg.translate(2, 1.5, 0));
     node = phongShaderNode.push(fireLight);
     houseNode.push(sg.draw(house));
+
+    //test window2
+    node = phongShaderNode.push(new AdvancedTextureSGNode(resources.windowTex));
+    node = node.push(new SetUniformSGNode("u_enableObjectTexture", true));
+    node = node.push(new NoAllocRenderSGNode(makeRect(3, 3)));
 
 
     //setup door relative to house
@@ -382,28 +408,6 @@ function init(resources) {
     //window7
     node = windowBaseNode.push(sg.translate(3.95, 1.41766, -0.72336));
     node.push(rotateNode);
-
-
-    //spawn trees around circle
-    var treeNode = phongShaderNode;
-    treeNode = treeNode.push(new AdvancedTextureSGNode(resources.normalTree));
-    treeNode = treeNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
-    var trees = [];
-    for(let i = 0; i < 200; i++) {
-        let alpha = -Math.PI/2 + i*7*Math.PI/(4*50)
-        let radius = 50;
-        let x = Math.cos(alpha);
-		let z = Math.sin(alpha);
-		x *= radius;
-		z *= radius;
-        let centerDist = [x, 0, z];
-        vec3.scale(centerDist, centerDist, (Math.random()*2-1)*0.5);
-        vec3.add(centerDist, [x, 0, z], centerDist);
-        vec3.add(centerDist, centerDist, [0, 3.5, 0]);
-        trees.push(new Billboard(centerDist, 4.5, 7));
-    }
-
-    treeNode.push(new NoAllocRenderSGNode(ForestRenderer(trees)));
 
 
     //setup list of resettable objects
@@ -614,7 +618,8 @@ loadResources({
   snowyTree: "../textures/snowy_tree.png",
   normalTree: "../textures/tree.png",
   wood: "../textures/wood_plank.jpg",
-  snowFloor: "../textures/snow_floor.jpg"
+  snowFloor: "../textures/snow_floor.jpg",
+  windowTex: "../textures/window.png"
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
 
