@@ -5,164 +5,191 @@ function emitterRenderer(emitter) {
 	return function(context) {
 		var gl = context.gl;
 		var shader = context.shader;
-		gl.useProgram(shader); //shaderProgram3 is the particle shaderprogram
+		gl.useProgram(shader);
+
+		var centerLocation = gl.getAttribLocation(shader, "a_centerPos");
+	    var timeLocation = gl.getAttribLocation(shader, "a_time");
+	    var velocityLocation = gl.getAttribLocation(shader, "a_velocity");
+	    var lifeTimeLocation = gl.getAttribLocation(shader, "a_lifeTime");
+	    var forceLocation = gl.getAttribLocation(shader, "a_force");
+	    var massLocation = gl.getUniformLocation(shader, "u_mass");
+	    var finalColorLocation = gl.getUniformLocation(shader, "u_finalColor");
+	    var camRightLocation = gl.getUniformLocation(shader, "u_camRight");
+	    var generalDirLocation = gl.getUniformLocation(shader, "u_generalDirection");
+	    var colorLocation = gl.getUniformLocation(shader, "u_color");
+	    var vortexPosLocation = gl.getUniformLocation(shader, "u_vortexPos");
+	    var angularVelLocation = gl.getUniformLocation(shader, "u_angularVel");
+	    var vortexFactorLocation = gl.getUniformLocation(shader, "u_vortexFactor");
+	    var numVortexLocation = gl.getUniformLocation(shader, "u_numVorteces");
+	    var dampeningLocation = gl.getUniformLocation(shader, "u_dampening");
+	    var timeScaleLocation = gl.getUniformLocation(shader, "u_timeScaling");
+		var positionLoc = gl.getAttribLocation(shader, "a_position");
+
 		//set uniforms
-        gl.uniform1f(shaderProgram3.massLocation, em.mass);
-        gl.uniform4fv(shaderProgram3.colorLocation, em.quadColors);
-        gl.uniform4fv(shaderProgram3.finalColorLocation, em.finalColors);
-        gl.uniform3fv(shaderProgram3.generalDirLocation, em.direction);
-		gl.uniform1f(shaderProgram3.dampeningLocation, em.dampening);
-		gl.uniform1f(shaderProgram3.timeScaleLocation, em.timeScaling);
+        gl.uniform1f(massLocation, em.mass);
+        gl.uniform4fv(colorLocation, em.quadColors);
+        gl.uniform4fv(finalColorLocation, em.finalColors);
+        gl.uniform3fv(generalDirLocation, em.direction);
+		gl.uniform1f(dampeningLocation, em.dampening);
+		gl.uniform1f(timeScaleLocation, em.timeScaling);
 		vec3.cross(em.camRight, camera.direction, camera.up);
-		gl.uniform3fv(shaderProgram3.camRightLocation, em.camRight);
+		gl.uniform3fv(camRightLocation, em.camRight);
 
-        setArrayBufferFloat(em.quadBuffer, shaderProgram3.positionLoc, 3); //render all vertices per instance
+        setArrayBufferFloat(em.quadBuffer, positionLoc, 3); //render all vertices per instance
 
-		setArrayBufferFloatInstanced(em.posbuffer, shaderProgram3.centerLocation, 3, 1);
-        setArrayBufferFloatInstanced(em.timesBuffer, shaderProgram3.timeLocation, 1, 1);
-		setArrayBufferFloatInstanced(em.velocitysBuffer, shaderProgram3.velocityLocation, 3, 1);
-		setArrayBufferFloatInstanced(em.lifeTimesBuffer, shaderProgram3.lifeTimeLocation, 1, 1);
-		setArrayBufferFloatInstanced(em.forcesBuffer, shaderProgram3.forceLocation, 3, 1);
+		setArrayBufferFloatInstanced(em.posbuffer, centerLocation, 3, 1);
+        setArrayBufferFloatInstanced(em.timesBuffer, timeLocation, 1, 1);
+		setArrayBufferFloatInstanced(em.velocitysBuffer, velocityLocation, 3, 1);
+		setArrayBufferFloatInstanced(em.lifeTimesBuffer, lifeTimeLocation, 1, 1);
+		setArrayBufferFloatInstanced(em.forcesBuffer, forceLocation, 3, 1);
         gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, em.numParticles);
+
+		//i think this is a bug in webgl2. If we don't do this here, then
+		//the lighting doesn't work properly because webgl suddenly renders
+		//everything instanced and assumes a divisor of 1 for the normals
+		let normalLoc = gl.getAttribLocation(phongShader, 'a_normal')
+	    gl.vertexAttribDivisor(normalLoc, 0);
+		let texLoc = gl.getAttribLocation(phongShader, 'a_texCoord')
+	    gl.vertexAttribDivisor(texLoc, 0);
 	}
 }
-
-class ParticleSystem {
-	constructor() {
-		this.emitter = [];
-		this.vorteces = [];
-		this.maxVorteces = 10;
-		for(var i = 0; i < this.maxVorteces; i++) this.vorteces[i] = new Vortex(zero, zero, 0, zero, 10);
-		this.lastUsedVortex = 0;
-		this.numConstantVorteces = 0;
-		this.turbulence = false;
-	}
-
-
-	addEmitter(emitter) {
-		this.emitter.push(emitter);
-	}
-
-	update() {
-		if(this.turbulence) {
-			for(let i = this.numConstantVorteces; i < 2; i++) {
-				if(! this.vorteces[i].isAlive()) {
-					let rand = Math.random()*this.emitter.length;
-					let emitter = this.emitter[Math.floor(rand)];
-					let angular = [Math.random()*0.001, Math.random()*0.001, Math.random()*0.001];
-					this.vorteces[i].spawn(vec3.add([], [0,5,0],emitter.emitterPos), [0,0.01,0], 10000, zero, 0.000000001);
-				}
-				this.vorteces[i].update();
-			}
-		}
-
-
-		this.emitter.forEach(function(element) {
-			element.update();
-		})
-	}
-
-	render(viewMatrix, sceneMatrix, projectionMatrix) {
-		var that = this;
-		gl.useProgram(shaderProgram3.program);
-
-		var pos = [];
-		var ang = [];
-		var fac = [];
-
-		let i = 0;
-		this.vorteces.forEach(function(vortex) {
-			Array.prototype.push.apply(pos, vortex.pos); //glsl needs arrays to be flattened, merge arrays without creating new object
-			Array.prototype.push.apply(ang, vortex.angularVel);
-			fac.push(vortex.factor);
-		})
-		gl.uniform3fv(shaderProgram3.vortexPosLocation, pos);
-		gl.uniform3fv(shaderProgram3.angularVelLocation, ang);
-		gl.uniform1fv(shaderProgram3.vortexFactorLocation, fac);
-		this.emitter.forEach(function(element) {
-			element.render(viewMatrix, sceneMatrix, projectionMatrix);
-		})
-	}
-
-	setConstantVortex(pos, angularVel, size) {
-		if(this.numConstantVorteces >= 10) return;	//all slots full
-		this.vorteces[this.numConstantVorteces].spawnConstant(pos, angularVel, size);
-		this.numConstantVorteces++;
-	}
-
-	enableTurbulence() {
-		this.turbulence = true;
-	}
-
-	disableTurbulence() {
-		this.turbulence = false;
-	}
-}
-
-class Vortex {
-	constructor(pos, angularVel, lifeTime, vel, size) {
-		this.pos = vec3.copy([], pos);
-		this.angularVel = vec3.copy([], angularVel);
-		this.lifeTime = lifeTime;
-		this.time = 0;
-		this.vel = vec3.copy([], vel);
-		this.size = size;
-		this.factor = 0;
-		this.isConstant = false;
-	}
-
-	spawn(pos, angularVel, lifeTime, vel, size) {
-		vec3.copy(this.pos, pos);
-		vec3.copy(this.angularVel, angularVel);
-		this.lifeTime = lifeTime;
-		this.time = 0;
-		vec3.copy(this.vel, vel);
-		vec3.copy(this.size, size);
-		this.factor = 0;
-	}
-
-	spawnConstant(pos, angularVel, size) {
-		vec3.copy(this.pos, pos);
-		vec3.copy(this.angularVel, angularVel);
-		this.time = 0;
-		this.size = size;
-		this.factor = 0.5*0.5*60*size;
-		this.isConstant = true;
-	}
-
-	kill() {
-		this.isConstant = false;
-		this.time = 0;
-		this.lifeTime = 0;
-	}
-	update() {
-		if(this.isConstant) {
-			return;
-		}
-		//smoothly transition vortexLifeTime
-		if(this.isAlive()) {
-			this.time += timer.delta;
-			if(! this.isAlive()) {
-				vec3.copy(this.angularVel, zero);
-				this.lifeTime = 0;
-				this.time = 0;
-				this.factor = 0;
-				vec3.copy(this.vel, zero);
-			} else {
-				var fac = this.time/this.lifeTime;
-				this.factor = (1-fac)*fac*60*this.size;
-				vec3.add(this.pos, this.pos, vec3.lerp([], zero, this.vel, this.time/this.lifeTime));
-			}
-		}
-	}
-
-	isAlive() {
-		if(this.isConstant) return true;
-		return this.time < this.lifeTime;
-	}
-
-
-}
+//
+// class ParticleSystem {
+// 	constructor() {
+// 		this.emitter = [];
+// 		this.vorteces = [];
+// 		this.maxVorteces = 10;
+// 		for(var i = 0; i < this.maxVorteces; i++) this.vorteces[i] = new Vortex(zero, zero, 0, zero, 10);
+// 		this.lastUsedVortex = 0;
+// 		this.numConstantVorteces = 0;
+// 		this.turbulence = false;
+// 	}
+//
+//
+// 	addEmitter(emitter) {
+// 		this.emitter.push(emitter);
+// 	}
+//
+// 	update() {
+// 		if(this.turbulence) {
+// 			for(let i = this.numConstantVorteces; i < 2; i++) {
+// 				if(! this.vorteces[i].isAlive()) {
+// 					let rand = Math.random()*this.emitter.length;
+// 					let emitter = this.emitter[Math.floor(rand)];
+// 					let angular = [Math.random()*0.001, Math.random()*0.001, Math.random()*0.001];
+// 					this.vorteces[i].spawn(vec3.add([], [0,5,0],emitter.emitterPos), [0,0.01,0], 10000, zero, 0.000000001);
+// 				}
+// 				this.vorteces[i].update();
+// 			}
+// 		}
+//
+//
+// 		this.emitter.forEach(function(element) {
+// 			element.update();
+// 		})
+// 	}
+//
+// 	render(viewMatrix, sceneMatrix, projectionMatrix) {
+// 		var that = this;
+// 		gl.useProgram(particleShader.program);
+//
+// 		var pos = [];
+// 		var ang = [];
+// 		var fac = [];
+//
+// 		let i = 0;
+// 		this.vorteces.forEach(function(vortex) {
+// 			Array.prototype.push.apply(pos, vortex.pos); //glsl needs arrays to be flattened, merge arrays without creating new object
+// 			Array.prototype.push.apply(ang, vortex.angularVel);
+// 			fac.push(vortex.factor);
+// 		})
+// 		gl.uniform3fv(particleShader.vortexPosLocation, pos);
+// 		gl.uniform3fv(particleShader.angularVelLocation, ang);
+// 		gl.uniform1fv(particleShader.vortexFactorLocation, fac);
+// 		this.emitter.forEach(function(element) {
+// 			element.render(viewMatrix, sceneMatrix, projectionMatrix);
+// 		})
+// 	}
+//
+// 	setConstantVortex(pos, angularVel, size) {
+// 		if(this.numConstantVorteces >= 10) return;	//all slots full
+// 		this.vorteces[this.numConstantVorteces].spawnConstant(pos, angularVel, size);
+// 		this.numConstantVorteces++;
+// 	}
+//
+// 	enableTurbulence() {
+// 		this.turbulence = true;
+// 	}
+//
+// 	disableTurbulence() {
+// 		this.turbulence = false;
+// 	}
+// }
+//
+// class Vortex {
+// 	constructor(pos, angularVel, lifeTime, vel, size) {
+// 		this.pos = vec3.copy([], pos);
+// 		this.angularVel = vec3.copy([], angularVel);
+// 		this.lifeTime = lifeTime;
+// 		this.time = 0;
+// 		this.vel = vec3.copy([], vel);
+// 		this.size = size;
+// 		this.factor = 0;
+// 		this.isConstant = false;
+// 	}
+//
+// 	spawn(pos, angularVel, lifeTime, vel, size) {
+// 		vec3.copy(this.pos, pos);
+// 		vec3.copy(this.angularVel, angularVel);
+// 		this.lifeTime = lifeTime;
+// 		this.time = 0;
+// 		vec3.copy(this.vel, vel);
+// 		vec3.copy(this.size, size);
+// 		this.factor = 0;
+// 	}
+//
+// 	spawnConstant(pos, angularVel, size) {
+// 		vec3.copy(this.pos, pos);
+// 		vec3.copy(this.angularVel, angularVel);
+// 		this.time = 0;
+// 		this.size = size;
+// 		this.factor = 0.5*0.5*60*size;
+// 		this.isConstant = true;
+// 	}
+//
+// 	kill() {
+// 		this.isConstant = false;
+// 		this.time = 0;
+// 		this.lifeTime = 0;
+// 	}
+// 	update() {
+// 		if(this.isConstant) {
+// 			return;
+// 		}
+// 		//smoothly transition vortexLifeTime
+// 		if(this.isAlive()) {
+// 			this.time += timer.delta;
+// 			if(! this.isAlive()) {
+// 				vec3.copy(this.angularVel, zero);
+// 				this.lifeTime = 0;
+// 				this.time = 0;
+// 				this.factor = 0;
+// 				vec3.copy(this.vel, zero);
+// 			} else {
+// 				var fac = this.time/this.lifeTime;
+// 				this.factor = (1-fac)*fac*60*this.size;
+// 				vec3.add(this.pos, this.pos, vec3.lerp([], zero, this.vel, this.time/this.lifeTime));
+// 			}
+// 		}
+// 	}
+//
+// 	isAlive() {
+// 		if(this.isConstant) return true;
+// 		return this.time < this.lifeTime;
+// 	}
+//
+//
+// }
 
 /**
 Abstract base class implementing a particle emitter.
@@ -324,33 +351,6 @@ class Emitter {
 		setDynamicArrayBufferData(this.lifeTimesBuffer, this.lifeTimes);
 		setDynamicArrayBufferData(this.forcesBuffer, this.forces);
 	}
-
-    render(viewMatrix, sceneMatrix, projectionMatrix) {
-        // gl.useProgram(shaderProgram3.program); //shaderProgram3 is the particle shaderprogram
-		//
-		// //set uniforms
-        // gl.uniformMatrix4fv(shaderProgram3.projectionLocation, false, projectionMatrix);
-        // gl.uniform1f(shaderProgram3.massLocation, this.mass);
-        // gl.uniform4fv(shaderProgram3.colorLocation, this.quadColors);
-        // gl.uniform4fv(shaderProgram3.finalColorLocation, this.finalColors);
-        // gl.uniform3fv(shaderProgram3.generalDirLocation, this.direction);
-		// gl.uniform1f(shaderProgram3.dampeningLocation, this.dampening);
-		// gl.uniform1f(shaderProgram3.timeScaleLocation, this.timeScaling);
-		// vec3.cross(this.camRight, camera.direction, camera.up);
-		// gl.uniform3fv(shaderProgram3.camRightLocation, this.camRight);
-		//
-        // shaderProgram3.setupModelView(viewMatrix, sceneMatrix);
-		//
-		//
-        // setArrayBufferFloat(this.quadBuffer, shaderProgram3.positionLoc, 3); //render all vertices per instance
-		//
-		// setArrayBufferFloatInstanced(this.posbuffer, shaderProgram3.centerLocation, 3, 1);
-        // setArrayBufferFloatInstanced(this.timesBuffer, shaderProgram3.timeLocation, 1, 1);
-		// setArrayBufferFloatInstanced(this.velocitysBuffer, shaderProgram3.velocityLocation, 3, 1);
-		// setArrayBufferFloatInstanced(this.lifeTimesBuffer, shaderProgram3.lifeTimeLocation, 1, 1);
-		// setArrayBufferFloatInstanced(this.forcesBuffer, shaderProgram3.forceLocation, 3, 1);
-        // gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.numParticles);
-    }
 
 	reset(){
 		for(var i = 0; i < this.maxNumPart; i++) this.particleBuffer[i].reset();

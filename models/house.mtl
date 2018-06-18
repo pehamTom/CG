@@ -1,5 +1,15 @@
 # Blender MTL File: 'house3.blend'
-# Material Count: 1
+# Material Count: 2
+
+newmtl Material
+Ns 96.078431
+Ka 0.000000 0.000000 0.000000
+Kd 0.052232 0.015884 0.010371
+Ks 0.017435 0.004979 0.002568
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
 
 newmtl None
 Ns 0
