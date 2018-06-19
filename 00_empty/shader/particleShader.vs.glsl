@@ -27,27 +27,15 @@ uniform float u_timeScaling;
 //TODO: Remove? Does not quite give the intended results
 uniform vec3 u_vortexPos;
 uniform vec3 u_angularVel;
-uniform float u_vortexFactor;
-uniform int u_numVorteces;
+
 uniform float u_dampening;
 
 void main() {
   float time = (a_lifeTime-a_time)/1000.0; //convert to seconds
   float gravity = time*time*u_mass;
 
-  vec3 vortexVel = cross(u_angularVel, a_centerPos-u_vortexPos) * u_vortexFactor;
-  // vec3 vortexVel = vec3(0,0,0);
-  // for(int i = 0; i < 10; i++) { //add up contribution of each vortex
-  //   if(u_vortexFactor[i] <= 0.00001)  {
-  //     continue;
-  //   }
-  //   vec3 vortexDist = a_centerPos-u_vortexPos[i];
-  //   vec3 tempVel = normalize(cross(u_angularVel[i], vortexDist));
-  //   float radius = length(vortexDist);
-  //   float inverseSquare = 1.0/(1.0+radius*radius);
-  //   tempVel *= inverseSquare * u_vortexFactor[i]; //factor by inverse square distance
-  //   vortexVel += tempVel;
-  // }
+  vec3 vortexVel = cross(u_angularVel, a_centerPos-u_vortexPos);
+
 
   //scale the particle with time
   vec3 scaledPos = a_position*(1.0+u_timeScaling*time);

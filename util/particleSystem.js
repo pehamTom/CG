@@ -27,6 +27,8 @@ function emitterRenderer(emitter) {
 	    var dampeningLocation = gl.getUniformLocation(shader, "u_dampening");
 	    var timeScaleLocation = gl.getUniformLocation(shader, "u_timeScaling");
 		var positionLoc = gl.getAttribLocation(shader, "a_position");
+		var vortexPosLoc = gl.getUniformLocation(shader, "u_vortexPos");
+		var angularVelLoc = gl.getUniformLocation(shader, "u_angularVel");
 
 		//set uniforms
         gl.uniform1f(massLocation, em.mass);
@@ -35,6 +37,10 @@ function emitterRenderer(emitter) {
         gl.uniform3fv(generalDirLocation, em.direction);
 		gl.uniform1f(dampeningLocation, em.dampening);
 		gl.uniform1f(timeScaleLocation, em.timeScaling);
+		if(em.activeVortex) {
+			gl.uniform3fv(vortexPosLoc, em.vortexPos);
+			gl.uniform3fv(angularVelLoc, em.angularVel);
+		}
 
 		//calculate the right vector of the camera; this is used for billboarding
 		vec3.cross(em.camRight, camera.direction, camera.up);
@@ -59,6 +65,8 @@ function emitterRenderer(emitter) {
 	    gl.vertexAttribDivisor(normalLoc, 0);
 		let texLoc = gl.getAttribLocation(phongShader, 'a_texCoord')
 	    gl.vertexAttribDivisor(texLoc, 0);
+
+		gl.uniform3fv(angularVelLoc, [0,0,0]); //reset Vortex so other particles aren't affected
 	}
 }
 
@@ -68,16 +76,6 @@ Classes that inherit from this must implement the functions:
  - updateParticle(particle)
  - createParticle(particle)
 
- Parameters:
- 	-emitterPos: Location of emitter in world coordinates
-	-partsPerSec: rate at which particles should be emitted in millisecond
-	-maxLifeTime: maximum lifetime a particle can have
-	-mass: mass of particle in kg
-	-direction: direction that particles should move towards in general (applied to all particles)
-	-particleSize: relative size of particle compared to unit quad
-	-fuzziness: the degree of randomness (usage depends on emitter implementation)
-	-startColor: color the particle has when spawned
-	- finalColor: color particle has when lifetime ends
 
 **/
 class Emitter {
@@ -122,6 +120,7 @@ class Emitter {
 		this.finalColors = finalColor;
 		this.dampening = 0.1;
 		this.timeScaling = timeScaling;
+		this.activeVortex = false;
 
 		//local buffers
 	    this.positions = new Float32Array(this.maxNumPart*3);
@@ -213,6 +212,12 @@ class Emitter {
 			particle.reset();
 		})
 		this.lastusedParticle = 0;
+	}
+
+	setVortex(vortexPos, angularVel) {
+		this.activeVortex = true;
+		this.vortexPos = vortexPos;
+		this.angularVel = angularVel;
 	}
 }
 

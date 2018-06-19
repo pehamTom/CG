@@ -116,9 +116,10 @@ function init(resources) {
         0.01, [1,0,0,1], [1, 0.7, 0.3, 0.9], new FireParticle(null), 0.7, [.6,0,0], [0,0,.6]);
     var smokeEmitter = new SphereEmitter([1.5, 7.17818, 4.215], 1000, 3000, 0.0001, [0,1,0], 0.08,
         0.050, [0.0,0.0,0.0,1.0], [0.8, 0.8, 0.8, 0.1], new Particle(null), 1, 0.3, 1);
-    var blackHoleParticleEmitter = new CircleEmitter([0, 0, 0], 1000, 5000, 0.0001, [0,0,0], 3,
-        0.01, [0.02,0.05,0.5,1], [0.7, 0.1, 0.5, 1], new Particle(null), 1, [1,0,0], [0,1,0], 70, 1.0);
+    var blackHoleParticleEmitter = new CircleEmitter([0, 0, 0], 1000, 2000, 0.0001, [0,0,0], 5,
+        0.01, [0.02,0.05,0.5,1], [0.7, 0.1, 0.5, 1], new Particle(null), 0, [1,0,0], [0,1,0], 200, -0.4);
 
+    blackHoleParticleEmitter.setVortex([0,0,0], [0,0,0.15]);
     var snowEmitter1 = ps.createSnowEmitter([20, 20, 0], 10, 10, 5000);
     var snowEmitter2 = ps.createSnowEmitter([-20, 20, 0], 10, 10, 5000);
     var snowEmitter3 = ps.createSnowEmitter([0, 20, 20], 10, 10, 5000);
@@ -283,9 +284,9 @@ function init(resources) {
     houseNode.push(sg.draw(house));
 
     //test window2
-    node = phongShaderNode.push(new AdvancedTextureSGNode(resources.windowTex));
-    node = node.push(new SetUniformSGNode("u_enableObjectTexture", true));
-    node = node.push(new NoAllocRenderSGNode(makeRect(3, 3)));
+    // node = phongShaderNode.push(new AdvancedTextureSGNode(resources.windowTex));
+    // node = node.push(new SetUniformSGNode("u_enableObjectTexture", true));
+    // node = node.push(new NoAllocRenderSGNode(makeRect(3, 3)));
 
 
     //setup door relative to house
@@ -356,58 +357,92 @@ function init(resources) {
     node = node.push(new RenderSGNode(resources.chair));
 
     //setup windows relative to house
-    let windowBaseNode = houseNode;
-    node = windowBaseNode.push(sg.translate(1.99791, 1.41766, 5.78689));
-	let windowNode = sg.scale(1.9979, 0.69084, 0.05); //window is the same only translation and rotation changes
+    node = houseNode;
+    node = phongShaderNode.push(new AdvancedTextureSGNode(resources.windowTex));
+    let windowNode = node.push(new SetUniformSGNode("u_enableObjectTexture", true));
+    node = windowNode.push(sg.translate(1.99791, 1.41766, 5.82));
+    let renderWindowZAxis = node.push(new NoAllocRenderSGNode(makeRect(1, 0.38)));
 
-	node = node.push(windowNode);
-	node = node.push(initMaterialSGNode(glassMaterial));
-	let renderWindowNode = new RenderSGNode(cubeRenderer([0.9, 0.9, 0.9, 0.1]));
-    node = node.push(renderWindowNode);
-    //windowbar 1
-    node = windowNode.push(sg.rotateZ(90));
-    scaleNode = sg.scale(0.1, 1, 1.2);
-    node = node.push(scaleNode);
-	node = node.push(initMaterialSGNode(darkWoodMaterial));
-    node = node.push(new RenderSGNode(cubeRenderer([0.4,0.2,0,1])));
-    //windowbar2
-    node = windowNode.push(scaleNode);
-	node = node.push(initMaterialSGNode(darkWoodMaterial));
-    node = node.push(new RenderSGNode(cubeRenderer([0.4,0.2,0,1])));
+    node = windowNode.push(sg.translate(-1.99791, 1.41766, 5.82689));
+    node.push(renderWindowZAxis);
 
-    //window2
-    node = windowBaseNode.push(sg.translate(-1.99791, 1.41766, 5.78689));
-    node.push(windowNode);
-    //window3
-    node = windowBaseNode.push(sg.translate(1.99791, 1.41766, -5.78689));
-    node.push(windowNode);
-    //window4
-    node = windowBaseNode.push(sg.translate(-1.99791, 1.41766, -5.78689));
-    node.push(windowNode);
+    node = windowNode.push(sg.translate(1.99791, 1.41766, -5.82689));
+    node.push(renderWindowZAxis);
 
-    //window4
-    node = windowBaseNode.push(sg.translate(-3.95, 1.41766, 2.17008));
-    node = node.push(sg.rotateY(90));
-    node = node.push(sg.scale(4.34017, 0.69084, 0.05));
-    windowNode.children.forEach(function(child) {
-        node.push(child);
-    });
+    node = windowNode.push(sg.translate(-1.99791, 1.41766, -5.82));
+    node.push(renderWindowZAxis);
 
-    //window5
-    node = windowBaseNode.push(sg.translate(-3.95, 1.41766, -3.61681));
-    let rotateNode = node.push(sg.rotateY(90));
-    node = rotateNode.push(sg.scale(1.44672, 0.69084, 0.05));
-    windowNode.children.forEach(function(child) {
-        node.push(child);
-    });
+    node = windowNode.push(sg.translate(-4.05, 1.41766, 2.17008));
+    let renderWindowXAxis = node.push(sg.rotateY(90));
+    node = renderWindowXAxis.push(new NoAllocRenderSGNode(makeRect(2.2, 0.38)));
 
-    //window6
-    node = windowBaseNode.push(sg.translate(3.95, 1.41766, 2.17008));
-    node.push(rotateNode);
+    node = windowNode.push(sg.translate(-4.05, 1.41766, -3.61681));
+    renderWindowXAxis = node.push(sg.rotateY(90));
+    node = renderWindowXAxis.push(new NoAllocRenderSGNode(makeRect(0.8, 0.38)));
 
-    //window7
-    node = windowBaseNode.push(sg.translate(3.95, 1.41766, -0.72336));
-    node.push(rotateNode);
+    node = windowNode.push(sg.translate(4.05, 1.41766, 2.17008));
+    node.push(renderWindowXAxis);
+
+    node = windowNode.push(sg.translate(4.05, 1.41766, -0.72336));
+    node.push(renderWindowXAxis);
+
+    node = node.push(new SetUniformSGNode("u_enableObjectTexture", false));
+    // let windowBaseNode = new SGNode();// houseNode;
+    // node = windowBaseNode.push(sg.translate(1.99791, 1.41766, 5.78689));
+	// let windowNode1 = sg.scale(1.9979, 0.69084, 0.05); //window is the same only translation and rotation changes
+    //
+	// node = node.push(windowNode);
+	// node = node.push(initMaterialSGNode(glassMaterial));
+    // node = node.push(new AdvancedTextureSGNode(resources.windowTex));
+    // node = node.push(new SetUniformSGNode("u_enableObjectTexture", true));
+	// let renderWindowNode = new RenderSGNode(makeRect(1,1));
+    // let renderWindowZAxis = node.push(renderWindowNode);
+    // node = node.push(new SetUniformSGNode("u_enableObjectTexture", false));
+    //
+    // //windowbar 1
+    // node = windowNode.push(sg.rotateZ(90));
+    // scaleNode = sg.scale(0.1, 1, 1.2);
+    // node = node.push(scaleNode);
+	// node = node.push(initMaterialSGNode(darkWoodMaterial));
+    // node = node.push(new RenderSGNode(cubeRenderer([0.4,0.2,0,1])));
+    // //windowbar2
+    // node = windowNode.push(scaleNode);
+	// node = node.push(initMaterialSGNode(darkWoodMaterial));
+    // node = node.push(new RenderSGNode(cubeRenderer([0.4,0.2,0,1])));
+    //
+    // //window2
+    // node = windowBaseNode.push(sg.translate(-1.99791, 1.41766, 5.78689));
+    // node.push(windowNode);
+    // //window3
+    // node = windowBaseNode.push(sg.translate(1.99791, 1.41766, -5.78689));
+    // node.push(windowNode);
+    // //window4
+    // node = windowBaseNode.push(sg.translate(-1.99791, 1.41766, -5.78689));
+    // node.push(windowNode);
+    //
+    // //window4
+    // node = windowBaseNode.push(sg.translate(-3.95, 1.41766, 2.17008));
+    // node = node.push(sg.rotateY(90));
+    // node = node.push(sg.scale(4.34017, 0.69084, 0.05));
+    // windowNode.children.forEach(function(child) {
+    //     node.push(child);
+    // });
+    //
+    // //window5
+    // node = windowBaseNode.push(sg.translate(-3.95, 1.41766, -3.61681));
+    // let rotateNode = node.push(sg.rotateY(90));
+    // node = rotateNode.push(sg.scale(1.44672, 0.69084, 0.05));
+    // windowNode.children.forEach(function(child) {
+    //     node.push(child);
+    // });
+    //
+    // //window6
+    // node = windowBaseNode.push(sg.translate(3.95, 1.41766, 2.17008));
+    // node.push(rotateNode);
+    //
+    // //window7
+    // node = windowBaseNode.push(sg.translate(3.95, 1.41766, -0.72336));
+    // node.push(rotateNode);
 
 
     //setup list of resettable objects
