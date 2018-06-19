@@ -27,6 +27,11 @@ struct Light {
 uniform Material u_material;
 uniform Light u_light;
 uniform Light u_light2;
+uniform Light u_spotLight;
+uniform vec3 u_spotLightPos;
+uniform vec3 u_spotLightDirection;
+uniform float u_spotLightAngle;
+uniform bool u_spotLightActive;
 uniform sampler2D u_tex;
 uniform bool u_enableObjectTexture;
 
@@ -35,6 +40,7 @@ varying vec3 v_normalVec;
 varying vec3 v_eyeVec;
 varying vec3 v_lightVec;
 varying vec3 v_light2Vec;
+varying vec3 v_spotLightVec;
 varying vec2 v_texCoord;
 
 vec4 calculateSimplePointLight(Light light, Material material, vec3 lightVec, vec3 normalVec, vec3 eyeVec, vec4 textureColor) {
@@ -72,8 +78,12 @@ void main() {
   {
 		textureColor = texture2D(u_tex, v_texCoord);
 	}
+
 	gl_FragColor =
 		calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor)
 		+ calculateSimplePointLight(u_light2, u_material, v_light2Vec, v_normalVec, v_eyeVec, textureColor);
 
+	if(u_spotLightActive && acos(dot(u_spotLightDirection, (-v_eyeVec)) / (length(u_spotLightDirection) * length(v_eyeVec))) < u_spotLightAngle) {
+		gl_FragColor += calculateSimplePointLight(u_spotLight, u_material, v_spotLightVec, v_normalVec, v_eyeVec, textureColor);
+	}
 }
