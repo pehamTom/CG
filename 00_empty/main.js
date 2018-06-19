@@ -120,18 +120,12 @@ function init(resources) {
         0.01, [0.02,0.05,0.5,1], [0.7, 0.1, 0.5, 1], new Particle(null), 0, [1,0,0], [0,1,0], 200, -0.4);
 
     blackHoleParticleEmitter.setVortex([0,0,0], [0,0,0.15]);
-    var snowEmitter1 = ps.createSnowEmitter([20, 20, 0], 10, 10, 5000);
-    var snowEmitter2 = ps.createSnowEmitter([-20, 20, 0], 10, 10, 5000);
-    var snowEmitter3 = ps.createSnowEmitter([0, 20, 20], 10, 10, 5000);
-    var snowEmitter4 = ps.createSnowEmitter([0, 20, -20], 10, 10, 5000);
+    var snowEmitter = ps.createSnowEmitter([0, 0, 0], 20, 20, 5000);
 
     updateQueue.push(fireEmitter);
     updateQueue.push(smokeEmitter);
     updateQueue.push(blackHoleParticleEmitter);
-    updateQueue.push(snowEmitter1);
-    // updateQueue.push(snowEmitter2);
-    // updateQueue.push(snowEmitter3);
-    // updateQueue.push(snowEmitter4);
+    updateQueue.push(snowEmitter);
 
     var colorShaderNode = sg.shader(colorShader);
     var constColorShaderNode = sg.shader(constColorShader);
@@ -143,12 +137,18 @@ function init(resources) {
 
     // particleShaderNode.push(new NoAllocRenderSGNode(emitterRenderer(fireEmitter)));
     particleShaderNode.push(new RenderSGNode(emitterRenderer(smokeEmitter)));
-    particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter1)));
-    // particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter2)));
-    // particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter3)));
-    // particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter4)));
+    node = particleShaderNode.push(sg.translate(30, 20, 0));
+    let snowEmitterNode = node.push(new RenderSGNode(emitterRenderer(snowEmitter)));
 
-	//setup ground plane
+    node = particleShaderNode.push(sg.translate(-30, 20, 0));
+    node = node.push(snowEmitterNode);
+
+    node = particleShaderNode.push(sg.translate(0, 20, 30));
+    node = node.push(snowEmitterNode);
+
+    node = particleShaderNode.push(sg.translate(0, 20, -30));
+    node = node.push(snowEmitterNode);
+    //setup ground plane
     node = initMaterialSGNode(snowMaterial);
     phongShaderNode.push(node);
     node = node.push(new SetUniformSGNode("u_enableObjectTexture", true));
