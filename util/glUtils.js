@@ -123,6 +123,15 @@ function cubeRenderer() {
        20,21,22, 20,22,23
     ]);
 
+    var cubeTextureCoords = new Float32Array([
+      0,0, 0,1, 1,1, 1,0,
+      0,0, 0,1, 1,1, 1,0,
+      0,0, 0,1, 1,1, 1,0,
+      0,0, 0,1, 1,1, 1,0,
+      0,0, 0,1, 1,1, 1,0,
+      0,0, 0,1, 1,1, 1,0
+    ])
+
     var cubeVertexBuffer, cubeNormalBuffer, cubeIndexBuffer;
 
     /**
@@ -134,6 +143,8 @@ function cubeRenderer() {
         cubeNormalBuffer = setupStaticArrayBuffer(cubeNormals);
 
         cubeIndexBuffer = setUpStaticElementBuffer(cubeIndices);
+
+        cubeTextureBuffer = setupStaticArrayBuffer(cubeTextureCoords);
     }
 
     /**
@@ -149,10 +160,14 @@ function cubeRenderer() {
 
         let positionLoc = gl.getAttribLocation(shader, "a_position");
         let normalLoc = gl.getAttribLocation(shader, "a_normal");
+        let texCoordLoc = gl.getAttribLocation(shader, "a_texCoord");
+
 
         setArrayBufferFloat(cubeVertexBuffer, positionLoc, 3);
 
         setArrayBufferFloat(cubeNormalBuffer, normalLoc, 3);
+
+        setArrayBufferFloat(cubeTextureBuffer, texCoordLoc, 2);
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIndexBuffer);
         gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0); //LINE_STRIP
@@ -289,42 +304,7 @@ var doorAnimator = function(endTime) {
     }
 }
 
-var transAnimator = function(startTime,duration,destination){
-  var endTime = duration;
-  var elapsed = 0;
-  var animate = false;
-  var destination = destination;
-  var start = vec3.create();
-  var transformation = vec3.create();
-
-  timeEventQueue.push({timeStamp: startTime, fire: function(){ animate = true}});
-
-  resetQueue.push({ reset:function(){
-    elapsed = 0;
-  }});
-
-  function reverse() {
-      const h = start;
-      start = destination;
-      destination = h;
-      elapsed = 0;
-  };
-
-  return function(){
-    if(animate)
-    elapsed += timer.delta;
-    var t = elapsed/duration;
-    if(t > 1){
-      reverse();
-    }
-    vec3.lerp(transformation,start,destination,t)
-    return glm.translate(transformation[0],transformation[1],transformation[2]);
-  }
-}
-
-
-var genericAnimator = function(startTime,reverseDuration,duration, rotpoint, angles){
-
+var genericAnimator = function(startTime,duration,reverseDuration,offset, rotpoint, angles){
   var endTime = duration;
   var duration = duration;
   var reverseDuration = reverseDuration;
@@ -336,7 +316,7 @@ var genericAnimator = function(startTime,reverseDuration,duration, rotpoint, ang
   var inversRotpoint = vec3.negate([], rotpoint);
   var trans1 = glm.translate(inversRotpoint[0],inversRotpoint[1],inversRotpoint[2]);
   var trans2 = glm.translate(rotpoint[0],rotpoint[1],rotpoint[2]);
-
+  var trans3 = glm.translate(offset[0],offset[1],offset[2]);
   var rotate = mat4.create();
   var transForm = mat4.create();
   var animate = false;
@@ -373,27 +353,23 @@ var genericAnimator = function(startTime,reverseDuration,duration, rotpoint, ang
   };
 
   return function() {
-      if(! animate)return glm.translate(0,0,0);
+      if(! animate)return trans3;
 
       elapsed += timer.delta;
       let t = elapsed / endTime;
       if(t > 1 ) {
-          reverse();
+          reverse()
           t = 0;
       };
       quat.slerp(interpolatedQuat, beginQuat, rotateQuat, t);
       mat4.fromQuat(rotate, interpolatedQuat);
       mat4.copy(transForm, identityMat);
-
       mat4.multiply(transForm, transForm, trans2);
       mat4.multiply(transForm, transForm, rotate);
       mat4.multiply(transForm, transForm, trans1);
       return transForm;
-
   }
 }
-
-
 var identityMat = mat4.create();
 
 /**

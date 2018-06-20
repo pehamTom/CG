@@ -44,7 +44,7 @@ function emitterRenderer(emitter) {
 
 		//calculate the right vector of the camera; this is used for billboarding
 		vec3.cross(em.camRight, camera.direction, camera.up);
-		gl.uniform3fv(camRightLocation, em.camRight);
+		gl.uniform3fv(camRightLocation, camera.rightVec);
 
 		//set buffer for vertex data; AttribDivisor of 0 indicates that the same
 		//data should be used for each particle

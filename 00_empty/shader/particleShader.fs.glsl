@@ -1,15 +1,12 @@
-/**
- * as simple fragment shader just setting the provided color as fragment color
- * Created by Samuel Gratzl on 08.02.2016.
- */
 
-//need to specify how "precise" float should be
 precision mediump float;
 
 //interpolate argument between vertex and fragment shader
 varying vec4 v_color;
 
-//entry point again
+//for the particles we simply pass on the color
+//correct lighting of the particles (smoke for example) is not correctly
+//achieved with phong shading
 void main() {
   gl_FragColor = v_color;
 }

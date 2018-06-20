@@ -42,7 +42,7 @@ void main() {
   //billboard the particle, see visual effects discription for explanation
   vec3 billboardedVert = a_centerPos + u_camRight*scaledPos.x + vec3(0.0, 1, 0.0) * scaledPos.y;
 
-  //calculate the particles movement as a sum of the velocties*time - gravity
+  //calculate the particles movement as a sum of the velocties*time - gravity (gravity is positive but should pull the fragment towards the negative y-axis)
   vec3 movement = vortexVel*time + a_velocity*time + u_generalDirection*time-vec3(0.0,gravity < 0.0 ? 0.0 : gravity,0);
   //decrease velocity with lifetime
   movement *= (1.0-u_dampening*(time/(a_lifeTime/1000.0)));
