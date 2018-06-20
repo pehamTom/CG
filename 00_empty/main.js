@@ -251,7 +251,7 @@ function init(resources) {
 	// phongShaderNode.push(tableLight);
 
     spotLight = new SpotLightSgNode(Math.PI/16, function(vecToWriteInto) {
-        vec3.copy(vecToWriteInto, [Math.sin(timer.elapsed/500)/60, Math.cos(timer.elapsed/500)/50, -1]); //sine and cosine make it look as if a human was holding a flashlight (shaky hands)
+        vec3.copy(vecToWriteInto, [Math.sin(timer.elapsed/500)/60, Math.cos(timer.elapsed/500)/50 - 0.15, -1]); //sine and cosine make it look as if a human was holding a flashlight (shaky hands)
     }, function(vecToWriteInto) {
         vec3.copy(vecToWriteInto, [0,0,0]);
     });

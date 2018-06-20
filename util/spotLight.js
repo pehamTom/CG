@@ -25,7 +25,7 @@ class SpotLightSgNode extends LightSGNode {
     super.setLight(context);
   }
 
-  activateSpotLight() {
+  toggle() {
       this.active = true;
   }
 }
