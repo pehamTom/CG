@@ -107,12 +107,12 @@ function init(resources) {
         0.01, [1,0,0,1], [1, 0.7, 0.3, 0.9], new FireParticle(null), 0.7, [.6,0,0], [0,0,.6]);
     var smokeEmitter = new SphereEmitter([1.9, 7.27818, 4.215], 1000, 3000, 0.0001, [0,1,0], 0.08,
         0.050, [0.0,0.0,0.0,1.0], [0, 0, 0, 0.1], new Particle(null), 1, 0.3, 1);
-    var blackHoleParticleEmitter = new CircleEmitter([0, 0, 0], 2000, 1200, 0.0001, [0,0,0], 5,
+    var blackHoleParticleEmitter = new CircleEmitter([0, 0, 0], 2000, 1100, 0.0001, [0,0,0], 5,
         0.01, [0.02,0.05,0.5,1], [0.7, 0.1, 0.5, 1], new Particle(null), 0, [1,0,0], [0,1,0], 200, -0.95);
 
     blackHoleParticleEmitter.setVortex([0,0,0], [0,0,0.4]);
 
-    var snowEmitter = ps.createSnowEmitter([0, 0, 0], 20, 20, 5000);
+    var snowEmitter = ps.createSnowEmitter([0, 0, 0], 20, 20, 5000, 200);
 
     //emitter need to be updated every frame
     updateQueue.push(fireEmitter);
@@ -228,7 +228,7 @@ function init(resources) {
 
     //set light source to the center of the moon
   	let moonLight = new LightSGNode([0, 0, 0]);
-  	moonLight.ambient = [0.3, 0.3, 0.3, 1.0];
+  	moonLight.ambient = [0.1, 0.1, 0.1, 1.0];
   	moonLight.diffuse = [0.8, 0.6, 0.8, 1.0];
   	moonLight.specular = [0.8, 0.6, 0.8, 1.0];
   	moonLight.uniform = 'u_light2';
@@ -370,7 +370,7 @@ function init(resources) {
     node = node.push(new AdvancedTextureSGNode(resources.newspaper));
     node = node.push(sg.translate(0, 2.49, 1));
     node = node.push(sg.rotateX(90));
-    node = node.push(new NoAllocRenderSGNode(makeRect(0.5, 1)));
+    node = node.push(new NoAllocRenderSGNode(makeRect(0.6, 1)));
     node = node.push(new SetUniformSGNode("u_enableObjectTexture", false));
 
 
