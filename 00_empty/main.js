@@ -131,10 +131,10 @@ function init(resources) {
     updateQueue.push(fireEmitter);
     // updateQueue.push(smokeEmitter);
     updateQueue.push(blackHoleParticleEmitter);
-    // updateQueue.push(snowEmitter1);
-    // updateQueue.push(snowEmitter2);
-    // updateQueue.push(snowEmitter3);
-    // updateQueue.push(snowEmitter4);
+     updateQueue.push(snowEmitter1);
+     updateQueue.push(snowEmitter2);
+     updateQueue.push(snowEmitter3);
+     updateQueue.push(snowEmitter4);
 
     var colorShaderNode = sg.shader(colorShader);
     var constColorShaderNode = sg.shader(constColorShader);
@@ -144,12 +144,12 @@ function init(resources) {
     scenegraph = new SGNode([particleShaderNode, colorShaderNode, constColorShaderNode, phongShaderNode]);
 
 
-    // particleShaderNode.push(new NoAllocRenderSGNode(emitterRenderer(fireEmitter)));
-    // particleShaderNode.push(new RenderSGNode(emitterRenderer(smokeEmitter)));
-    // particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter1)));
-    // particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter2)));
-    // particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter3)));
-    // particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter4)));
+     //particleShaderNode.push(new NoAllocRenderSGNode(emitterRenderer(fireEmitter)));
+     particleShaderNode.push(new RenderSGNode(emitterRenderer(smokeEmitter)));
+     particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter1)));
+     particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter2)));
+     particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter3)));
+     particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter4)));
 
 	//setup ground plane
     node = initMaterialSGNode(snowMaterial);
@@ -161,14 +161,20 @@ function init(resources) {
     rect.texture = [0, 0, 300, 0, 300, 300, 0, 300];
     node.push(sg.draw(rect));
 
+    node = initMaterialSGNode(goldMaterial);
+    phongShaderNode.push(node);
+    initDeer(node,resources);
 
-    node = colorShaderNode.push(sg.translate(10,0,10));
+    //node = node.push(new NoAllocRenderSGNode(modelRenderer(deermodel)));
+    /*node = colorShaderNode.push(sg.translate(5,0,-2));
+    node = node.push(sg.scale(0.7,0.7,0.7));
+    //initDeer(node,resources);
+
+    node = initMaterialSGNode(snowMaterial);
     node = node.push(sg.scale(0.7,0.7,0.7));
     // initDeer(node);
+*/
 
-    node = colorShaderNode.push(sg.translate(5,0,10));
-    node = node.push(sg.scale(0.7,0.7,0.7));
-    // initDeer(node);
 
 
     //setup black hole
@@ -260,7 +266,7 @@ function init(resources) {
     node = phongShaderNode.push(node);
     node = node.push(new SetUniformSGNode("u_enableObjectTexture", false));
     let houseNode = node;
-	node = node.push(sg.translate(2, 1.5, 0));
+	  node = node.push(sg.translate(2, 1.5, 0));
     node = phongShaderNode.push(fireLight);
     houseNode.push(sg.draw(house));
 
@@ -425,9 +431,8 @@ function init(resources) {
     updateQueue.push(cameraAnimator);
 }
 
-var deerBodyVertexBuffer;
-var deerBodyIndexBuffer;
-function initDeer(parent){
+
+function initDeer(parent,resources){
     var deer;
     var body;
     var brown = [.6,.3,.1,1];
@@ -438,117 +443,152 @@ function initDeer(parent){
     deer = parent.push(sg.translate(0,1.7,0))
     deer = deer.push(sg.rotateX(0));
     //body
-    deerBodyVertexBuffer = setupStaticArrayBuffer(deerBodyVertices);
-    deerBodyIndexBuffer = setUpStaticElementBuffer(deerBodyIndices);
+    var deerBodyModel = {
+      position: deerBodyVertices,
+      index: deerBodyIndices,
+      normal: deerBodyNormals,
+      texture: []
+    };
+    for(var i = 0; i < deerBodyModel.index.length; i++){
+      deerBodyModel.texture.push(0);
+      deerBodyModel.texture.push(0);
+      deerBodyModel.texture.push(1);
+      deerBodyModel.texture.push(0);
+      deerBodyModel.texture.push(1);
+      deerBodyModel.texture.push(1);
+    }
 
     body = deer.push(sg.translate(20,0,0));
     temp = body.push(sg.rotateY(90));
     temp = temp.push(sg.scale(1.3,1.3,1.3));
-    temp = temp.push(sg.shader(constColorShader));
-    temp = temp.push(new SetUniformSGNode("u_color", brown));
-    temp = temp.push(new NoAllocRenderSGNode(function(context){
-       gl.bindBuffer(gl.ARRAY_BUFFER, deerBodyVertexBuffer);
-       var loc = gl.getAttribLocation(context.shader, "a_position");
-
-       gl.vertexAttribPointer(loc, 3, gl.FLOAT, false,0,0) ;
-       gl.enableVertexAttribArray(loc);
-
-       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, deerBodyIndexBuffer);
-       gl.drawElements(gl.TRIANGLES, deerBodyIndices.length,gl.UNSIGNED_SHORT, 0);
-
-    }));
-    temp = temp.push(sg.shader(colorShader));
+    temp = temp.push(new SetUniformSGNode("u_enableObjectTexture",true));
+    temp = temp.push(new AdvancedTextureSGNode(resources.snowFloor));
+    temp = temp.push(new NoAllocRenderSGNode(modelRenderer(deerBodyModel)));
+    temp.push(new SetUniformSGNode("u_enableObjectTexture", false));
     //neck
     temp = body.push(sg.translate(0.35,0.9,0.35));
     temp = temp.push(sg.rotateX(-40));
     //temp = temp.push(sg.shader(constColorShader.program))
-    node = temp.push(sg.scale(.25,.25,.5));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    temp = temp.push(sg.scale(.25,.25,.5));
+    temp.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
     //node.push(new NoAllocRenderSGNode(cylinderRenderer()));
 
     //head
-
-    deerHeadVertexBuffer = setupStaticArrayBuffer(deerHeadVertices);
-    deerHeadIndexBuffer  = setUpStaticElementBuffer(deerHeadIndices);
+   var deerHeadModel = {
+      position: deerHeadVertices,
+      index:    deerHeadIndices,
+      normal:   deerHeadNormals,
+      texture: []
+    };
+    for(var i = 0; i < deerHeadModel.index.length/3; i++){
+      deerHeadModel.texture.push(0);
+      deerHeadModel.texture.push(0);
+      deerHeadModel.texture.push(0);
+      deerHeadModel.texture.push(1);
+      deerHeadModel.texture.push(1);
+      deerHeadModel.texture.push(0);
+    }
 
     temp = body.push(sg.translate(0,1,.40));
     temp = temp.push(sg.rotateX(30));
     temp = temp.push(sg.scale(1.5,1.5,1.5));
-    temp = temp.push(new NoAllocRenderSGNode(function(context){
-       gl.bindBuffer(gl.ARRAY_BUFFER, deerHeadVertexBuffer);
-       var loc = gl.getAttribLocation(context.shader, "a_position");
-
-       gl.vertexAttribPointer(loc, 3, gl.FLOAT, false,0,0) ;
-       gl.enableVertexAttribArray(loc);
-
-       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, deerHeadIndexBuffer);
-       gl.drawElements(gl.TRIANGLES, deerHeadIndices.length,gl.UNSIGNED_SHORT, 0);
-
-    }));
+    temp = temp.push(new SetUniformSGNode("u_enableObjectTexture", true));
+    temp = temp.push(new AdvancedTextureSGNode(resources.wood));
+    temp = temp.push(new NoAllocRenderSGNode(modelRenderer(deerHeadModel)));
+    temp.push(new SetUniformSGNode("u_enableObjectTexture", false));
 
     // right front leg
-    temp = body.push(sg.translate(0,.1,0));
-    temp = temp.push(sg.rotateX(2));
+    temp = body.push(sg.rotateX(-25));
+    temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,0,0],[0,0.25,0],[-20,0,0])));
+    temp = temp.push(sg.translate(0,.1,-.1));
+    temp = temp.push(sg.rotateX(5));
     node = temp.push(sg.scale(0.25,0.8,0.3));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(sg.translate(0,-0.7,-0.05));
-    temp = temp.push(sg.rotateX(15));
+    temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,0,0],[0,-.35,0],[-60,0,0])));
+    temp = temp.push(sg.translate(0,-0.4,-.4));
+    temp = temp.push(sg.rotateX(80));
     node = temp.push(sg.scale(.15,1.,.15));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(sg.translate(0,-.5,.05));
-    temp = temp.push(sg.rotateX(-10));
+    temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,0,0],[0,-.40,0.03],[30,0,0])));
+    temp = temp.push(sg.translate(0,-.45,0.05));
+    temp = temp.push(sg.rotateX(-25));
     node = temp.push(sg.scale(.2,0.1,.3));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
     //left front leg
-    temp = body.push(sg.translate(0.7,.1,0));
-    temp = temp.push(sg.rotateX(2));
+
+    temp = body.push(sg.rotateX(-25));
+    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,0.25,0],[-20,0,0])));
+    temp = temp.push(sg.translate(.7,.1,-.1));
+    temp = temp.push(sg.rotateX(5));
     node = temp.push(sg.scale(0.25,0.8,0.3));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(sg.translate(0,-0.7,-0.05));
-    temp = temp.push(sg.rotateX(15));
+    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,-.35,0],[-60,0,0])));
+    temp = temp.push(sg.translate(0,-0.4,-.4));
+    temp = temp.push(sg.rotateX(80));
     node = temp.push(sg.scale(.15,1.,.15));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(sg.translate(0,-.5,.05));
-    temp = temp.push(sg.rotateX(-10));
+    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,-.40,0.03],[30,0,0])));
+    temp = temp.push(sg.translate(0,-.45,0.05));
+    temp = temp.push(sg.rotateX(-25));
     node = temp.push(sg.scale(.2,0.1,.3));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+
+
     //right hind leg
     temp = body.push(sg.translate(0,.25,-1.7));
-    temp = temp.push(sg.rotateX(-20));
+    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,0],[0,0,0],[50,0,0])));
+    temp = temp.push(sg.rotateX(-50));
     node = temp.push(sg.scale(.2,.7,.6));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(sg.translate(0,-0.3,-0.1));
-    temp = temp.push(sg.rotateX(-20));
+
+    temp = temp.push(sg.translate(0,-0.3,-.2));
+    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,0],[0,0,.30],[40,0,0])));
+    temp = temp.push(sg.rotateX(-30));
     node = temp.push(sg.scale(.2,.2,1));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+
+    temp = temp.push(sg.rotateX(-20));
     temp = temp.push(sg.translate(0,-.4,-.5));
+    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,0],[0,0.35,0.15],[50,0,0])));
     temp = temp.push(sg.rotateX(100));
     node = temp.push(sg.scale(.15,.15,0.95));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(sg.translate(0,.1,.5));
-    temp = temp.push(sg.rotateX(30));
+
+    temp = temp.push(sg.translate(0,0.075,0.5));
+    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,0],[0,-0.05,-.03],[-80,0,0])));
+    temp = temp.push(sg.rotateX(60));
     node = temp.push(sg.scale(.15,.25,.1));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+
+
     //left hind leg
     temp = body.push(sg.translate(0.7,.25,-1.7));
-    temp = temp.push(sg.rotateX(-20));
+    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,0,0],[50,0,0])));
+    temp = temp.push(sg.rotateX(-50));
     node = temp.push(sg.scale(.2,.7,.6));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(sg.translate(0,-0.3,-0.1));
-    temp = temp.push(sg.rotateX(-20));
+
+    temp = temp.push(sg.translate(0,-0.3,-.2));
+    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,0,.30],[40,0,0])));
+    temp = temp.push(sg.rotateX(-30));
     node = temp.push(sg.scale(.2,.2,1));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+
+    temp = temp.push(sg.rotateX(-20));
     temp = temp.push(sg.translate(0,-.4,-.5));
+    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,0.35,0.15],[50,0,0])));
     temp = temp.push(sg.rotateX(100));
     node = temp.push(sg.scale(.15,.15,0.95));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(sg.translate(0,.1,.5));
-    temp = temp.push(sg.rotateX(30));
+
+    temp = temp.push(sg.translate(0,0.075,0.5));
+    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,-0.05,-.03],[-80,0,0])));
+    temp = temp.push(sg.rotateX(60));
     node = temp.push(sg.scale(.15,.25,.1));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
 
     //tail
-    temp = body.push(sg.translate(0.45,.8,-2.));
+    temp = body.push(sg.translate(0.3,.8,-2));
     temp = temp.push(sg.rotateX(60));
     node = temp.push(sg.scale(.1,.1,.1));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));

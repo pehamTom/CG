@@ -1,4 +1,4 @@
-var startPos = [1, 2, 0];
+var startPos = [10, 2, 0];
 var deltaPos = [0, 0, 0];
 //object bundling all data and operation needed for camera animation
 var camera = {
