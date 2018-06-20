@@ -79,6 +79,7 @@ document.addEventListener("keyup", function(event) {
         } break;
         case "G":
         case "g":{
+            reset();
           cameraAnimator.begin();
         } break;
     }
@@ -292,8 +293,6 @@ function init(resources) {
     treeNode.push(new NoAllocRenderSGNode(ForestRenderer(trees)));
     treeNode.push(new SetUniformSGNode("u_enableObjectTexture", false));
 
-    initDeer(phongShaderNode, resources);
-
     //setup house
     node = phongShaderNode.push(fireLight);
     node =  new initMaterialSGNode(lightWoodMaterial);
@@ -419,176 +418,11 @@ function init(resources) {
 
     //setup list of updatable objects
     updateQueue.push(camera);
-    cameraAnimator.addEvent(new CameraSetRotationPointEvent([0,0,0],1));
-    cameraAnimator.addEvent(new CameraLookAtEvent([0,0,0],1));
-    cameraAnimator.addEvent(new CameraRotationEvent(0,180,0,1,1000));
-    cameraAnimator.addEvent(new CameraRotationEvent(0,180,0,1,2000));
-    cameraAnimator.addEvent(new CameraMoveEvent([0,10,0],2,1000));
-
-    updateQueue.push(cameraAnimator);
+    initMove();
+    cameraAnimator.begin();
 }
 
 
-function initDeer(parent,resources){
-    var deer;
-    var body;
-    var brown = [.6,.3,.1,1];
-    var temp;
-    //Deer
-
-
-    deer = parent.push(sg.translate(0,1.15,0))
-    deer = deer.push(sg.rotateX(0));
-    //body
-    var deerBodyModel = {
-      position: deerBodyVertices,
-      index: deerBodyIndices,
-      normal: deerBodyNormals,
-      texture: []
-    };
-    for(var i = 0; i < deerBodyModel.index.length; i++){
-      deerBodyModel.texture.push(0);
-      deerBodyModel.texture.push(0);
-      deerBodyModel.texture.push(1);
-      deerBodyModel.texture.push(0);
-      deerBodyModel.texture.push(1);
-      deerBodyModel.texture.push(1);
-    }
-
-    body = deer.push(sg.translate(20,0,0));
-    temp = body.push(sg.rotateY(90));
-    temp = temp.push(sg.scale(1.3,1.3,1.3));
-    temp = temp.push(new SetUniformSGNode("u_enableObjectTexture",true));
-    temp = temp.push(new AdvancedTextureSGNode(resources.snowFloor));
-    temp = temp.push(new NoAllocRenderSGNode(modelRenderer(deerBodyModel)));
-    temp.push(new SetUniformSGNode("u_enableObjectTexture", false));
-    //neck
-    temp = body.push(sg.translate(0.35,0.9,0.35));
-    temp = temp.push(sg.rotateX(-40));
-    temp = temp.push(sg.scale(.25,.25,.5));
-    temp.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    //node.push(new NoAllocRenderSGNode(cylinderRenderer()));
-
-    //head
-   var deerHeadModel = {
-      position: deerHeadVertices,
-      index:    deerHeadIndices,
-      normal:   deerHeadNormals,
-      texture: []
-    };
-    for(var i = 0; i < deerHeadModel.index.length/3; i++){
-      deerHeadModel.texture.push(0);
-      deerHeadModel.texture.push(0);
-      deerHeadModel.texture.push(0);
-      deerHeadModel.texture.push(1);
-      deerHeadModel.texture.push(1);
-      deerHeadModel.texture.push(0);
-    }
-
-    temp = body.push(sg.translate(0,1,.40));
-    temp = temp.push(sg.rotateX(30));
-    temp = temp.push(sg.scale(1.5,1.5,1.5));
-    temp = temp.push(new SetUniformSGNode("u_enableObjectTexture", true));
-    temp = temp.push(new AdvancedTextureSGNode(resources.snowFloor));
-    temp = temp.push(new NoAllocRenderSGNode(modelRenderer(deerHeadModel)));
-    temp.push(new SetUniformSGNode("u_enableObjectTexture", false));
-
-    // right front leg
-    temp = body.push(sg.rotateX(-25));
-    temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,0.25,0],[-20,0,0])));
-    temp = temp.push(sg.translate(0,.1,-.1));
-    temp = temp.push(sg.rotateX(5));
-    node = temp.push(sg.scale(0.25,0.8,0.3));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,-.35,0],[-60,0,0])));
-    temp = temp.push(sg.translate(0,-0.4,-.4));
-    temp = temp.push(sg.rotateX(80));
-    node = temp.push(sg.scale(.15,1.,.15));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,-.40,0.03],[30,0,0])));
-    temp = temp.push(sg.translate(0,-.45,0.05));
-    temp = temp.push(sg.rotateX(-25));
-    node = temp.push(sg.scale(.2,0.1,.3));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    //left front leg
-
-    temp = body.push(sg.rotateX(-25));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0.25,0],[-20,0,0])));
-    temp = temp.push(sg.translate(.7,.1,-.1));
-    temp = temp.push(sg.rotateX(5));
-    node = temp.push(sg.scale(0.25,0.8,0.3));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,-.35,0],[-60,0,0])));
-    temp = temp.push(sg.translate(0,-0.4,-.4));
-    temp = temp.push(sg.rotateX(80));
-    node = temp.push(sg.scale(.15,1.,.15));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,-.40,0.03],[30,0,0])));
-    temp = temp.push(sg.translate(0,-.45,0.05));
-    temp = temp.push(sg.rotateX(-25));
-    node = temp.push(sg.scale(.2,0.1,.3));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-
-    //right hind leg
-    temp = body.push(sg.translate(0,.25,-1.7));
-    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,0],[50,0,0])));
-    temp = temp.push(sg.rotateX(-50));
-    node = temp.push(sg.scale(.2,.7,.6));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-    temp = temp.push(sg.translate(0,-0.3,-.2));
-    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,.30],[40,0,0])));
-    temp = temp.push(sg.rotateX(-30));
-    node = temp.push(sg.scale(.2,.2,1));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-    temp = temp.push(sg.rotateX(-20));
-    temp = temp.push(sg.translate(0,-.4,-.5));
-    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0.35,0.15],[50,0,0])));
-    temp = temp.push(sg.rotateX(100));
-    node = temp.push(sg.scale(.15,.15,0.95));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-    temp = temp.push(sg.translate(0,0.075,0.5));
-    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,-0.05,-.03],[-80,0,0])));
-    temp = temp.push(sg.rotateX(60));
-    node = temp.push(sg.scale(.15,.25,.1));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-
-    //left hind leg
-    temp = body.push(sg.translate(0.7,.25,-1.7));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[50,0,0])));
-    temp = temp.push(sg.rotateX(-50));
-    node = temp.push(sg.scale(.2,.7,.6));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-    temp = temp.push(sg.translate(0,-0.3,-.2));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,.30],[40,0,0])));
-    temp = temp.push(sg.rotateX(-30));
-    node = temp.push(sg.scale(.2,.2,1));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-    temp = temp.push(sg.rotateX(-20));
-    temp = temp.push(sg.translate(0,-.4,-.5));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0.35,0.15],[50,0,0])));
-    temp = temp.push(sg.rotateX(100));
-    node = temp.push(sg.scale(.15,.15,0.95));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-    temp = temp.push(sg.translate(0,0.075,0.5));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,-0.05,-.03],[-80,0,0])));
-    temp = temp.push(sg.rotateX(60));
-    node = temp.push(sg.scale(.15,.25,.1));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-    //tail
-    temp = body.push(sg.translate(0.3,.8,-2));
-    temp = temp.push(sg.rotateX(60));
-    node = temp.push(sg.scale(.1,.1,.1));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-}
 
 /**
  * render one frame
@@ -612,7 +446,7 @@ function render(timeInMilliseconds) {
     var viewMatrix = [];
     mat4.identity(sceneMatrix);
     mat4.lookAt(viewMatrix, camera.pos, vec3.add([], camera.pos, camera.direction), camera.up);
-    mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 1, 2000);
+    mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 0.1, 2000);
 
     //update
     update();

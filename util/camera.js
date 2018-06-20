@@ -1,4 +1,4 @@
-var startPos = [10, 2, 0];
+var startPos = [0.1, 1.7, 0];
 var deltaPos = [0, 0, 0];
 //object bundling all data and operation needed for camera animation
 var camera = {
@@ -16,7 +16,7 @@ var camera = {
     deltaY:0,
     animatedAngle:0,
     rightVec: [0,0,0],
-    fov:glMatrix.toRadian(30),
+    fov:glMatrix.toRadian(45),
 
     isFree: true,
 
@@ -36,18 +36,17 @@ var camera = {
     moveCameraToTime:0 ,
 
 update: function(){
-      if(this.isFree){
-          this.freeMovement();
-      }else{
-      //performe quaternion rotation
-      if(this.rotationDuration > 0){
-        this.updateRotation();
-      }
-      //performe linear movement
-      if(this.moveToDuration > 0){
-        this.updatePosition();
-      }
+  if(this.isFree){
+      this.freeMovement();
+  }else{
+    //performe quaternion rotation
+    if(this.rotationDuration > 0){
+      this.updateRotation();
     }
+    //performe linear movement
+
+    this.updatePosition();
+  }
 },
 updateRotation: function(){
   var timeElapsed = timer.delta;
@@ -65,34 +64,37 @@ updateRotation: function(){
   vec3.subtract(pos, this.pos, this.rotationPoint);
   vec3.transformQuat(pos, pos, this.rotationQuat);
   vec3.add(this.pos,pos,this.rotationPoint);
-  vec3.transformQuat(this.up, this.up,this.rotationQuat);
+  // vec3.transformQuat(this.up, this.up,this.rotationQuat);
 
   if(timeLeft <= 0){
       this.rotationDuration = 0;
   }
 
   this.rotationTime += timeElapsed;
-
-
 },
 updatePosition: function(){
 
     var timeElapsed = timer.delta;
-    var timeLeft = this.moveToDuration - this.moveToTime;
+    var timeLeft,temp;
 
-    if(timeLeft < timeElapsed){
-        timeElapsed = timeLeft;
+    vec3.cross(this.rightVec, this.up, this.direction);
+    vec3.normalize(this.rightVec, this.rightVec);
+    if(this.moveToDuration > 0){
+      timeLeft = this.moveToDuration - this.moveToTime;
+
+      if(timeLeft < timeElapsed){
+          timeElapsed = timeLeft;
+      }
+      temp = vec3.create();
+      vec3.lerp(temp,[0,0,0],this.moveToPoint, timeElapsed/this.moveToDuration);
+      vec3.add(this.rotationPoint,this.rotationPoint,temp);
+      vec3.add(this.pos,this.pos,temp);
+      if(timeLeft <= 0){
+        this.moveToDuration = 0;
+      }
+
+      this.moveToTime += timeElapsed;
     }
-    var temp = vec3.create();
-    vec3.lerp(temp,[0,0,0],this.moveToPoint, timeElapsed/this.moveToDuration);
-    vec3.add(this.rotationPoint,this.rotationPoint,temp);
-    vec3.add(this.pos,this.pos,temp);
-    if(timeLeft <= 0){
-      this.moveToDuration = 0;
-    }
-
-    this.moveToTime += timeElapsed;
-
     if(this.moveCameraToDuration > 0){
        timeLeft = this.moveCameraToDuration - this.moveCameraToTime;
 
@@ -105,12 +107,13 @@ updatePosition: function(){
        if(timeLeft <= 0){
          this.moveCameraToDuration = 0;
        }
-        this.moveCameraToTime += timeElapsed;
+       this.moveCameraToTime += timeElapsed;
     }
   },
   freeMovement:function(){
       var sensitivity = 0.005;
       //translation
+
       if(this.movingForward) {
           vec3.add(this.pos, this.pos, vec3.scale(deltaPos, this.direction, timer.delta*sensitivity));
       } else if(this.movingBackward) {
@@ -122,9 +125,9 @@ updatePosition: function(){
           vec3.normalize(this.rightVec, this.rightVec);
           vec3.add(this.pos, this.pos, vec3.scale(deltaPos, this.rightVec, timer.delta*sensitivity));
       } else if(this.movingRight) {
-          vec3.cross(this.rightVec, this.direction, this.up);
+          vec3.cross(this.rightVec, this.up, this.direction);
           vec3.normalize(this.rightVec, this.rightVec);
-          vec3.add(this.pos, this.pos, vec3.scale(deltaPos,this.rightVec, timer.delta*sensitivity));
+          vec3.sub(this.pos, this.pos, vec3.scale(deltaPos,this.rightVec, timer.delta*sensitivity));
       }
 
       //rotation using euler angles
@@ -155,7 +158,7 @@ updatePosition: function(){
   rotateQuadBy: function(xAngle,yAngle,zAngle,timeinSeconds){
      quat.identity(this.destinationQuat);
 
-     this.rotationDuration = timeinSeconds * 1000;
+     this.rotationDuration = timeinSeconds;
      this.rotationTime = 0;
      quat.rotateX(this.destinationQuat,this.destinationQuat, xAngle*Math.PI/180);
      quat.rotateY(this.destinationQuat,this.destinationQuat, yAngle*Math.PI/180);
@@ -163,15 +166,16 @@ updatePosition: function(){
      quat.normalize(this.destinationQuat,this.destinationQuat);
   },
 
-  moveRBTo: function(point, timeinSeconds){
-      this.moveToDuration = timeinSeconds * 1000;
+  moveRPTo: function(point, timeinSeconds){
+      this.moveToDuration = timeinSeconds;
       this.moveToPoint = vec3.sub([],point,this.rotationPoint);
       this.moveToTime = 0;
   },
   moveTo: function(point, timeinSeconds){
-      this.moveCameraToDuration = timeinSeconds * 1000;
-      this.moveCameraToPoint = point;
-      this.moveCameraTime = 0;
+
+      this.moveCameraToDuration = timeinSeconds;
+      this.moveCameraToPoint =  vec3.sub([],point,this.pos);
+      this.moveCameraToTime = 0;
   },
   lookAt: function(point) {
 
@@ -200,7 +204,10 @@ updatePosition: function(){
 reset: function() {
     this.pos = vec3.copy([], startPos);
     this.up = [0, 1, 0];
-    this.fov = glMatrix.toRadian(30)
+    this.fov = glMatrix.toRadian(50);
+    this.rotationDuration= 0;
+    this.moveToDuration= 0;
+    this.moveCameraToDuration= 0;
     this.lookAt(vec3.negate(this.direction, this.pos));
 }
 };
@@ -232,13 +239,16 @@ var cameraAnimator = {
       // console.log(this.currEvent + " =>" + currTime + ": " + this.events[this.currEvent].timestamp);
 
       if(currTime >= this.events[this.currEvent].timestamp){
+
         this.events[this.currEvent].fire();
+
         this.currEvent++;
         if(this.currEvent > this.events.length-1){
           this.currEvent = 0;
           this.running = false;
         }
       }
+              console.log(currTime+":"+this.events[this.currEvent].timestamp + ":" + this.currEvent);
     }
   }
 };
@@ -265,15 +275,26 @@ class CameraRotationEvent extends CameraEvent{
   }
 }
 
-class CameraMoveEvent extends CameraEvent{
+class CameraRotationPointMoveEvent extends CameraEvent{
   constructor(pos,duration,timestamp){
     super(duration,timestamp)
     this.pos = pos;
 
   }
   fire(){
-    camera.moveRBTo(this.pos, this.duration);
+    camera.moveRPTo(this.pos, this.duration);
   }
+}
+class CameraMoveEvent extends CameraEvent{
+
+  constructor(pos,duration,timestamp){
+    super(duration,timestamp)
+    this.pos = pos;
+
+  }
+    fire(){
+      camera.moveTo(this.pos, this.duration);
+    }
 }
 
 class CameraSetRotationPointEvent {
@@ -294,5 +315,54 @@ class CameraLookAtEvent{
   fire(){
     camera.lookAt(this.point);
   }
+}
+
+function initMove(){
+
+  //start Position
+  cameraAnimator.addEvent(new CameraMoveEvent([0,1.7,-4],10,0));
+  cameraAnimator.addEvent(new CameraLookAtEvent([0,1.7,5],10));
+  cameraAnimator.addEvent(new CameraSetRotationPointEvent([0,1.7,-4],0));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,-70,0,10,20));
+
+  //Scene 1 Indoors
+  cameraAnimator.addEvent(new CameraRotationEvent(0,60,0,2000,1250));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,10,0,700,3250));
+
+  cameraAnimator.addEvent(new CameraRotationEvent(0,10,0,700,4300));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,80,0,2000,5000));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,25,0,500,7000));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,-10,-2,1000,7500));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,-20,0,500,8500));
+
+
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([0,1.7,-1.5],2000,4500));
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([1,1.7,-2],1000,6500));
+
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([4,1.6,-3.5],1500,7500));
+
+  //Scene 2 House and Vortex
+  cameraAnimator.addEvent(new CameraMoveEvent([23,7.3,0],1, 11000));
+  cameraAnimator.addEvent(new CameraLookAtEvent([0,0,0],11010));
+  cameraAnimator.addEvent(new CameraSetRotationPointEvent([0,0,0],11000));
+
+  cameraAnimator.addEvent(new CameraRotationEvent(0,180,0,3000,11000));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,98,20,1500,14000));
+  cameraAnimator.addEvent(new CameraRotationEvent(10,0,0,3000,15500));
+
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([0,7,-4],3000,14000));
+
+  //Scene 3 The Run
+  cameraAnimator.addEvent(new CameraMoveEvent([4,1.6,-3.5],1,19000));
+  cameraAnimator.addEvent(new CameraLookAtEvent([8,1.6,-3.5],19010));
+  cameraAnimator.addEvent(new CameraSetRotationPointEvent([4,1.6,-3.5],19020));
+
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([3,1.6,-6],1000,19100));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,90,20,1000,19100));
+
+  console.log(cameraAnimator.events);
+
+  // cameraAnimator.addEvent(new CameraRotationEvent(0,90,0,1000,19000));
+  updateQueue.push(cameraAnimator);
 
 }

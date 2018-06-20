@@ -255,7 +255,7 @@ var doorAnimator = function(endTime) {
     var rotate = mat4.create();
     var transForm = mat4.create();
     var animate = false;
-    timeEventQueue.push({timeStamp: 10000, fire: function(){ animate = true}});
+    timeEventQueue.push({timeStamp: 7500, fire: function(){ animate = true}});
 
     resetQueue.push({reset: function() {
         elapsed = 0;
@@ -275,7 +275,8 @@ var doorAnimator = function(endTime) {
         elapsed += timer.delta;
         let t = elapsed / endTime;
         if(t > 1 ) {
-            reverse()
+            return transForm;
+            //reverse()
             t = 0;
         };
         quat.slerp(interpolatedQuat, beginQuat, rotateQuat, t);
