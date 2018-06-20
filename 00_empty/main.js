@@ -58,6 +58,11 @@ document.addEventListener("keypress", function(event) {
         case "t": {
             reset();
         } break;
+
+        case "O":
+        case "o": {
+            spotLight.toggle();
+        } break;
     }
 });
 
@@ -85,7 +90,7 @@ document.addEventListener("keyup", function(event) {
         } break;
         case "G":
         case "g":{
-            cameraAnimator.begin();
+          cameraAnimator.begin();
         } break;
     }
 });
@@ -135,6 +140,7 @@ function init(resources) {
     var constColorShaderNode = sg.shader(constColorShader);
     var particleShaderNode = sg.shader(particleShader);
     var phongShaderNode = sg.shader(phongShader);
+
     //setup scenegraph
     scenegraph = new SGNode([particleShaderNode, colorShaderNode, constColorShaderNode, phongShaderNode]);
 
@@ -163,6 +169,9 @@ function init(resources) {
     node.push(new SetUniformSGNode("u_enableObjectTexture", false));
 
 
+    node = new AnimationSGNode(transAnimator(100,10000,[0,0,10]));
+    phongShaderNode.push(node);
+    initDeer(node,resources);
 
     //setup black hole
     node = initMaterialSGNode(constantColorMaterial([0,0,0,1]));
@@ -269,7 +278,7 @@ function init(resources) {
     treeNode = treeNode.push(new AdvancedTextureSGNode(resources.normalTree));
     treeNode = treeNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
     var trees = [];
-    for(let i = 0; i < 200; i++) {
+    for(let i = 0; i < 500; i++) {
         let alpha = -Math.PI/2 + i*7*Math.PI/(4*50)
         let radius = 50;
         let x = Math.cos(alpha);
@@ -397,27 +406,6 @@ function init(resources) {
 
     phongShaderNode.push(noLight);
 
-    //spawn trees around circle
-    var treeNode = phongShaderNode;
-    treeNode = treeNode.push(new AdvancedTextureSGNode(resources.normalTree));
-    treeNode = treeNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
-    var trees = [];
-    for(let i = 0; i < 200; i++) {
-        let alpha = -Math.PI/2 + i*7*Math.PI/(4*50)
-        let radius = 50;
-        let x = Math.cos(alpha);
-		let z = Math.sin(alpha);
-		x *= radius;
-		z *= radius;
-        let centerDist = [x, 0, z];
-        vec3.scale(centerDist, centerDist, (Math.random()*2-1)*0.5);
-        vec3.add(centerDist, [x, 0, z], centerDist);
-        vec3.add(centerDist, centerDist, [0, 3.5, 0]);
-        trees.push(new Billboard(centerDist, 4.5, 7));
-    }
-
-    treeNode.push(new NoAllocRenderSGNode(ForestRenderer(trees)));
-
 
     //setup list of resettable objects
     resetQueue.push(timer);
@@ -425,12 +413,11 @@ function init(resources) {
 
     //setup list of updatable objects
     updateQueue.push(camera);
-    cameraAnimator.addEvent(new CameraSetRotationPointEvent([0,0,0],100));
-    cameraAnimator.addEvent(new CameraLookAtEvent([0,0,0],101));
-    //cameraAnimator.addEvent(new CameraMoveRotationPointEvent([0,0,0],0.1,0));
-    //cameraAnimator.addEvent(new CameraQuadRotationEvent(90,0,0,2,100));
-    cameraAnimator.addEvent(new CameraQuadRotationEvent(0,90,0,2,2100));
-    //cameraAnimator.addEvent(new CameraMoveRotationPointEvent([10,0,0],2,1000));
+    cameraAnimator.addEvent(new CameraSetRotationPointEvent([0,0,0],1));
+    cameraAnimator.addEvent(new CameraLookAtEvent([0,0,0],1));
+    cameraAnimator.addEvent(new CameraRotationEvent(0,180,0,1,1000));
+    cameraAnimator.addEvent(new CameraRotationEvent(0,180,0,1,2000));
+    cameraAnimator.addEvent(new CameraMoveEvent([0,10,0],2,1000));
 
     updateQueue.push(cameraAnimator);
 }
@@ -444,7 +431,7 @@ function initDeer(parent,resources){
     //Deer
 
 
-    deer = parent.push(sg.translate(0,1.7,0))
+    deer = parent.push(sg.translate(0,1.15,0))
     deer = deer.push(sg.rotateX(0));
     //body
     var deerBodyModel = {
@@ -496,23 +483,23 @@ function initDeer(parent,resources){
     temp = temp.push(sg.rotateX(30));
     temp = temp.push(sg.scale(1.5,1.5,1.5));
     temp = temp.push(new SetUniformSGNode("u_enableObjectTexture", true));
-    temp = temp.push(new AdvancedTextureSGNode(resources.wood));
+    temp = temp.push(new AdvancedTextureSGNode(resources.snowFloor));
     temp = temp.push(new NoAllocRenderSGNode(modelRenderer(deerHeadModel)));
     temp.push(new SetUniformSGNode("u_enableObjectTexture", false));
 
     // right front leg
     temp = body.push(sg.rotateX(-25));
-    temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,0,0],[0,0.25,0],[-20,0,0])));
+    temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,0.25,0],[-20,0,0])));
     temp = temp.push(sg.translate(0,.1,-.1));
     temp = temp.push(sg.rotateX(5));
     node = temp.push(sg.scale(0.25,0.8,0.3));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,0,0],[0,-.35,0],[-60,0,0])));
+    temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,-.35,0],[-60,0,0])));
     temp = temp.push(sg.translate(0,-0.4,-.4));
     temp = temp.push(sg.rotateX(80));
     node = temp.push(sg.scale(.15,1.,.15));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,0,0],[0,-.40,0.03],[30,0,0])));
+    temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,-.40,0.03],[30,0,0])));
     temp = temp.push(sg.translate(0,-.45,0.05));
     temp = temp.push(sg.rotateX(-25));
     node = temp.push(sg.scale(.2,0.1,.3));
@@ -520,17 +507,17 @@ function initDeer(parent,resources){
     //left front leg
 
     temp = body.push(sg.rotateX(-25));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,0.25,0],[-20,0,0])));
+    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0.25,0],[-20,0,0])));
     temp = temp.push(sg.translate(.7,.1,-.1));
     temp = temp.push(sg.rotateX(5));
     node = temp.push(sg.scale(0.25,0.8,0.3));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,-.35,0],[-60,0,0])));
+    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,-.35,0],[-60,0,0])));
     temp = temp.push(sg.translate(0,-0.4,-.4));
     temp = temp.push(sg.rotateX(80));
     node = temp.push(sg.scale(.15,1.,.15));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,-.40,0.03],[30,0,0])));
+    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,-.40,0.03],[30,0,0])));
     temp = temp.push(sg.translate(0,-.45,0.05));
     temp = temp.push(sg.rotateX(-25));
     node = temp.push(sg.scale(.2,0.1,.3));
@@ -539,26 +526,26 @@ function initDeer(parent,resources){
 
     //right hind leg
     temp = body.push(sg.translate(0,.25,-1.7));
-    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,0],[0,0,0],[50,0,0])));
+    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,0],[50,0,0])));
     temp = temp.push(sg.rotateX(-50));
     node = temp.push(sg.scale(.2,.7,.6));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
 
     temp = temp.push(sg.translate(0,-0.3,-.2));
-    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,0],[0,0,.30],[40,0,0])));
+    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,.30],[40,0,0])));
     temp = temp.push(sg.rotateX(-30));
     node = temp.push(sg.scale(.2,.2,1));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
 
     temp = temp.push(sg.rotateX(-20));
     temp = temp.push(sg.translate(0,-.4,-.5));
-    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,0],[0,0.35,0.15],[50,0,0])));
+    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0.35,0.15],[50,0,0])));
     temp = temp.push(sg.rotateX(100));
     node = temp.push(sg.scale(.15,.15,0.95));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
 
     temp = temp.push(sg.translate(0,0.075,0.5));
-    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,0],[0,-0.05,-.03],[-80,0,0])));
+    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,-0.05,-.03],[-80,0,0])));
     temp = temp.push(sg.rotateX(60));
     node = temp.push(sg.scale(.15,.25,.1));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
@@ -566,26 +553,26 @@ function initDeer(parent,resources){
 
     //left hind leg
     temp = body.push(sg.translate(0.7,.25,-1.7));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,0,0],[50,0,0])));
+    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[50,0,0])));
     temp = temp.push(sg.rotateX(-50));
     node = temp.push(sg.scale(.2,.7,.6));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
 
     temp = temp.push(sg.translate(0,-0.3,-.2));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,0,.30],[40,0,0])));
+    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,.30],[40,0,0])));
     temp = temp.push(sg.rotateX(-30));
     node = temp.push(sg.scale(.2,.2,1));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
 
     temp = temp.push(sg.rotateX(-20));
     temp = temp.push(sg.translate(0,-.4,-.5));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,0.35,0.15],[50,0,0])));
+    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0.35,0.15],[50,0,0])));
     temp = temp.push(sg.rotateX(100));
     node = temp.push(sg.scale(.15,.15,0.95));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
 
     temp = temp.push(sg.translate(0,0.075,0.5));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,-0.05,-.03],[-80,0,0])));
+    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,-0.05,-.03],[-80,0,0])));
     temp = temp.push(sg.rotateX(60));
     node = temp.push(sg.scale(.15,.25,.1));
     node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
