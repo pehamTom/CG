@@ -178,24 +178,24 @@ updatePosition: function(){
     this.deltaY = 0;	//don't rotate because of mouse movement
 
     var direction = vec3.subtract([], point, this.pos);
-    vec3.normalize(direction, direction);
-    this.pitch = Math.asin(direction[1]);
-    this.yaw = Math.atan2(direction[2], direction[0]);
-  },
-  zoom: function(offSet) {
-      this.fov += offSet*0.01;
-      if(this.fov < glMatrix.toRadian(1)) {
-          this.fov = glMatrix.toRadian(1);
-      } else if(this.fov > glMatrix.toRadian(70)) {
-          this.fov = glMatrix.toRadian(70);
-      }
-  },
-  reset: function() {
-      this.pos = vec3.copy([], startPos);
-      this.up = [0, 1, 0];
-      this.fov = glMatrix.toRadian(30)
-      this.lookAt(vec3.negate(this.direction, this.pos));
-  }
+vec3.normalize(direction, direction);
+this.pitch = Math.asin(direction[1]);
+this.yaw = Math.atan2(direction[2], direction[0]);
+},
+zoom: function(offSet) {
+    this.fov += offSet*0.0001;
+    if(this.fov < glMatrix.toRadian(1)) {
+        this.fov = glMatrix.toRadian(1);
+    } else if(this.fov > glMatrix.toRadian(70)) {
+        this.fov = glMatrix.toRadian(70);
+    }
+},
+reset: function() {
+    this.pos = vec3.copy([], startPos);
+    this.up = [0, 1, 0];
+    this.fov = glMatrix.toRadian(30)
+    this.lookAt(vec3.negate(this.direction, this.pos));
+}
 };
 
 var cameraAnimator = {

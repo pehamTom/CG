@@ -16,6 +16,7 @@ var aspectRatio = canvasWidth / canvasHeight;
 
 var house;
 var chimney;
+var spotLight = null;
 
 var blackHolePos = [0,100,-250];
 
@@ -115,26 +116,20 @@ function init(resources) {
     cube = resources.cube;
 
 
-    //TEST
     var fireEmitter= new PlaneEmitter([0,0,0], 3000, 1300, 0.01, [0.0,1.3,0], 0.05,
         0.01, [1,0,0,1], [1, 0.7, 0.3, 0.9], new FireParticle(null), 0.7, [.6,0,0], [0,0,.6]);
-    var smokeEmitter = new SphereEmitter([1.5, 7.17818, 4.215], 1000, 3000, 0.0001, [0,1,0], 0.08,
+    var smokeEmitter = new SphereEmitter([1.9, 7.27818, 4.215], 1000, 3000, 0.0001, [0,1,0], 0.08,
         0.050, [0.0,0.0,0.0,1.0], [0.8, 0.8, 0.8, 0.1], new Particle(null), 1, 0.3, 1);
-    var blackHoleParticleEmitter = new CircleEmitter([0, 0, 0], 1000, 5000, 0.0001, [0,0,0], 3,
-        0.01, [0.02,0.05,0.5,1], [0.7, 0.1, 0.5, 1], new Particle(null), 1, [1,0,0], [0,1,0], 70, 1.0);
+    var blackHoleParticleEmitter = new CircleEmitter([0, 0, 0], 1000, 2000, 0.0001, [0,0,0], 5,
+        0.01, [0.02,0.05,0.5,1], [0.7, 0.1, 0.5, 1], new Particle(null), 0, [1,0,0], [0,1,0], 200, -0.4);
 
-    var snowEmitter1 = ps.createSnowEmitter([20, 20, 0], 10, 10, 5000);
-    var snowEmitter2 = ps.createSnowEmitter([-20, 20, 0], 10, 10, 5000);
-    var snowEmitter3 = ps.createSnowEmitter([0, 20, 20], 10, 10, 5000);
-    var snowEmitter4 = ps.createSnowEmitter([0, 20, -20], 10, 10, 5000);
+    blackHoleParticleEmitter.setVortex([0,0,0], [0,0,0.15]);
+    var snowEmitter = ps.createSnowEmitter([0, 0, 0], 20, 20, 5000);
 
     updateQueue.push(fireEmitter);
-    // updateQueue.push(smokeEmitter);
+    updateQueue.push(smokeEmitter);
     updateQueue.push(blackHoleParticleEmitter);
-     updateQueue.push(snowEmitter1);
-     updateQueue.push(snowEmitter2);
-     updateQueue.push(snowEmitter3);
-     updateQueue.push(snowEmitter4);
+    updateQueue.push(snowEmitter);
 
     var colorShaderNode = sg.shader(colorShader);
     var constColorShaderNode = sg.shader(constColorShader);
@@ -143,15 +138,20 @@ function init(resources) {
     //setup scenegraph
     scenegraph = new SGNode([particleShaderNode, colorShaderNode, constColorShaderNode, phongShaderNode]);
 
+    particleShaderNode.push(new RenderSGNode(emitterRenderer(smokeEmitter)));
+    node = particleShaderNode.push(sg.translate(30, 15, 0));
+    let snowEmitterNode = node.push(new RenderSGNode(emitterRenderer(snowEmitter)));
 
-     //particleShaderNode.push(new NoAllocRenderSGNode(emitterRenderer(fireEmitter)));
-     particleShaderNode.push(new RenderSGNode(emitterRenderer(smokeEmitter)));
-     particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter1)));
-     particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter2)));
-     particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter3)));
-     particleShaderNode.push(new RenderSGNode(emitterRenderer(snowEmitter4)));
+    node = particleShaderNode.push(sg.translate(-30, 15, 0));
+    node = node.push(snowEmitterNode);
 
-	//setup ground plane
+    node = particleShaderNode.push(sg.translate(0, 15, 30));
+    node = node.push(snowEmitterNode);
+
+    node = particleShaderNode.push(sg.translate(0, 15, -30));
+    node = node.push(snowEmitterNode);
+
+    //setup ground plane
     node = initMaterialSGNode(snowMaterial);
     phongShaderNode.push(node);
     node = node.push(new SetUniformSGNode("u_enableObjectTexture", true));
@@ -160,27 +160,14 @@ function init(resources) {
     var rect = makeRect(300, 300);
     rect.texture = [0, 0, 300, 0, 300, 300, 0, 300];
     node.push(sg.draw(rect));
-
-    node = initMaterialSGNode(goldMaterial);
-    phongShaderNode.push(node);
-    initDeer(node,resources);
-
-    //node = node.push(new NoAllocRenderSGNode(modelRenderer(deermodel)));
-    /*node = colorShaderNode.push(sg.translate(5,0,-2));
-    node = node.push(sg.scale(0.7,0.7,0.7));
-    //initDeer(node,resources);
-
-    node = initMaterialSGNode(snowMaterial);
-    node = node.push(sg.scale(0.7,0.7,0.7));
-    // initDeer(node);
-*/
+    node.push(new SetUniformSGNode("u_enableObjectTexture", false));
 
 
 
     //setup black hole
     node = initMaterialSGNode(constantColorMaterial([0,0,0,1]));
     node = phongShaderNode.push(node);
-    node.push(new SetUniformSGNode("u_enableObjectTexture", false));
+  //enable texture ?
     let beforeTrans = node;
     node = node.push(new AnimationSGNode(function() {
         var endTime = 15000;
@@ -236,9 +223,9 @@ function init(resources) {
     trans3.push(new NoAllocRenderSGNode(makeSphere(10, 30, 30)));
 
 	let moonLight = new LightSGNode([0, 0, 0]);
-	moonLight.ambient = [0.1, 0.1, 0.1, 1.0];
-	moonLight.diffuse = [1, 0.4, 0.1, 1.0];
-	moonLight.specular = [1, 0.4, 0.1, 1.0];
+	moonLight.ambient = [0.3, 0.3, 0.3, 1.0];
+	moonLight.diffuse = [0.8, 0.6, 0.8, 1.0];
+	moonLight.specular = [0.8, 0.6, 0.8, 1.0];
 	moonLight.uniform = 'u_light2';
 	node = trans3.push(sg.shader(phongShader));
 	node.push(moonLight);
@@ -250,24 +237,62 @@ function init(resources) {
 	fireLight.diffuse = [1.0, 0.3, 0, 1.0];
 	fireLight.specular = [1.0, 0.2, 0, 1.0];
     node = node.push(sg.translate(2, 1.5, 0));
-    node = phongShaderNode.push(fireLight);
+
+    //test -> auxiliary light so that objects outside house aren't lighted by fireLight
+    var noLight  = new LightSGNode([0, 0, 0]);
+      noLight.ambient = [0, 0, 0, 1];
+    	noLight.diffuse = [0, 0, 0, 1];
+    	noLight.diffuse = [0, 0, 0, 1];
+    	noLight.specular = [0, 0, 0, 1];
 
 	//setup tableLight -- for now this is a test
-	var tableLight = new LightSGNode([-2.4,2, 0]);
+	var tableLight = new LightSGNode([0,2.7, 0]);
 	tableLight.ambient = [0.1, 0.1, 0.1, 1.0];
 	tableLight.diffuse = [0.5, 0.5, 0.5, 1.0];
 	tableLight.uniform = "u_light2";
 	node = tableLight.push(initMaterialSGNode(constantColorMaterial([0.8, 0.8, 0.1, 1.0])));
-	node.push(new NoAllocRenderSGNode(makeSphere((0.1, 30, 30))));
+	node.push(new NoAllocRenderSGNode(makeSphere(0.1, 30, 30)));
 	// phongShaderNode.push(tableLight);
 
+    spotLight = new SpotLightSgNode(Math.PI/16, function(vecToWriteInto) {
+        vec3.copy(vecToWriteInto, [Math.sin(timer.elapsed/500)/60, Math.cos(timer.elapsed/500)/50 - 0.15, -1]); //sine and cosine make it look as if a human was holding a flashlight (shaky hands)
+    }, function(vecToWriteInto) {
+        vec3.copy(vecToWriteInto, [0,0,0]);
+    });
+    spotLight.ambient = [0, 0, 0, 1];
+    spotLight.diffuse = [1, 1, 1, 1];
+    spotLight.specular = [1, 1, 1, 1];
+
+    phongShaderNode.push(spotLight);
+    //spawn trees around circle
+    var treeNode = phongShaderNode;
+    treeNode = treeNode.push(new AdvancedTextureSGNode(resources.normalTree));
+    treeNode = treeNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
+    var trees = [];
+    for(let i = 0; i < 200; i++) {
+        let alpha = -Math.PI/2 + i*7*Math.PI/(4*50)
+        let radius = 50;
+        let x = Math.cos(alpha);
+    		let z = Math.sin(alpha);
+    		x *= radius;
+    		z *= radius;
+        let centerDist = [x, 0, z];
+        vec3.scale(centerDist, centerDist, (Math.random()*2-1)*0.5);
+        vec3.add(centerDist, [x, 0, z], centerDist);
+        vec3.add(centerDist, centerDist, [0, 3.5, 0]);
+        trees.push(new Billboard(centerDist, 4.5, 7));
+    }
+
+    treeNode.push(new NoAllocRenderSGNode(ForestRenderer(trees)));
+
+    treeNode.push(new SetUniformSGNode("u_enableObjectTexture", false));
+
     //setup house
+    node = phongShaderNode.push(fireLight);
     node =  new initMaterialSGNode(lightWoodMaterial);
     node = phongShaderNode.push(node);
-    node = node.push(new SetUniformSGNode("u_enableObjectTexture", false));
     let houseNode = node;
-	  node = node.push(sg.translate(2, 1.5, 0));
-    node = phongShaderNode.push(fireLight);
+	   node = node.push(sg.translate(2, 1.5, 0));
     houseNode.push(sg.draw(house));
 
 
@@ -326,72 +351,51 @@ function init(resources) {
 
     //setup table relative to houseNode
     node = houseNode.push(initMaterialSGNode(metalMaterial));
-    node = node.push(sg.translate(-2.5, 0, 0));
+    node = node.push(sg.translate(-2.5, 0, -2));
     node = node.push(sg.scale(0.3, 0.35, 0.3));
     node = node.push(sg.rotateY(90));
     node = node.push(new RenderSGNode(resources.table));
 
     //setup chair relative to houseNode
     node = houseNode.push(initMaterialSGNode(lightWoodMaterial));
-    node = node.push(sg.translate(-1, 0, 0));
+    node = node.push(sg.translate(-1, 0, -2));
     node = node.push(sg.scale(0.28, 0.28, 0.28));
     // node = node.push(sg.rotateY(90));
     node = node.push(new RenderSGNode(resources.chair));
 
     //setup windows relative to house
-    let windowBaseNode = houseNode;
-    node = windowBaseNode.push(sg.translate(1.99791, 1.41766, 5.78689));
-	let windowNode = sg.scale(1.9979, 0.69084, 0.05); //window is the same only translation and rotation changes
+    node = houseNode;
+    node = phongShaderNode.push(new AdvancedTextureSGNode(resources.windowTex));
+    let windowNode = node.push(new SetUniformSGNode("u_enableObjectTexture", true));
+    node = windowNode.push(sg.translate(1.99791, 1.41766, 5.82));
+    let renderWindowZAxis = node.push(new NoAllocRenderSGNode(makeRect(1, 0.38)));
 
-	node = node.push(windowNode);
-	node = node.push(initMaterialSGNode(glassMaterial));
-	let renderWindowNode = new RenderSGNode(cubeRenderer([0.9, 0.9, 0.9, 0.1]));
-    node = node.push(renderWindowNode);
-    //windowbar 1
-    node = windowNode.push(sg.rotateZ(90));
-    scaleNode = sg.scale(0.1, 1, 1.2);
-    node = node.push(scaleNode);
-	node = node.push(initMaterialSGNode(darkWoodMaterial));
-    node = node.push(new RenderSGNode(cubeRenderer([0.4,0.2,0,1])));
-    //windowbar2
-    node = windowNode.push(scaleNode);
-	node = node.push(initMaterialSGNode(darkWoodMaterial));
-    node = node.push(new RenderSGNode(cubeRenderer([0.4,0.2,0,1])));
+    node = windowNode.push(sg.translate(-1.99791, 1.41766, 5.82689));
+    node.push(renderWindowZAxis);
 
-    //window2
-    node = windowBaseNode.push(sg.translate(-1.99791, 1.41766, 5.78689));
-    node.push(windowNode);
-    //window3
-    node = windowBaseNode.push(sg.translate(1.99791, 1.41766, -5.78689));
-    node.push(windowNode);
-    //window4
-    node = windowBaseNode.push(sg.translate(-1.99791, 1.41766, -5.78689));
-    node.push(windowNode);
+    node = windowNode.push(sg.translate(1.99791, 1.41766, -5.82689));
+    node.push(renderWindowZAxis);
 
-    //window4
-    node = windowBaseNode.push(sg.translate(-3.95, 1.41766, 2.17008));
-    node = node.push(sg.rotateY(90));
-    node = node.push(sg.scale(4.34017, 0.69084, 0.05));
-    windowNode.children.forEach(function(child) {
-        node.push(child);
-    });
+    node = windowNode.push(sg.translate(-1.99791, 1.41766, -5.82));
+    node.push(renderWindowZAxis);
 
-    //window5
-    node = windowBaseNode.push(sg.translate(-3.95, 1.41766, -3.61681));
-    let rotateNode = node.push(sg.rotateY(90));
-    node = rotateNode.push(sg.scale(1.44672, 0.69084, 0.05));
-    windowNode.children.forEach(function(child) {
-        node.push(child);
-    });
+    node = windowNode.push(sg.translate(-4.05, 1.41766, 2.17008));
+    let renderWindowXAxis = node.push(sg.rotateY(90));
+    node = renderWindowXAxis.push(new NoAllocRenderSGNode(makeRect(2.2, 0.38)));
 
-    //window6
-    node = windowBaseNode.push(sg.translate(3.95, 1.41766, 2.17008));
-    node.push(rotateNode);
+    node = windowNode.push(sg.translate(-4.05, 1.41766, -3.61681));
+    renderWindowXAxis = node.push(sg.rotateY(90));
+    node = renderWindowXAxis.push(new NoAllocRenderSGNode(makeRect(0.8, 0.38)));
 
-    //window7
-    node = windowBaseNode.push(sg.translate(3.95, 1.41766, -0.72336));
-    node.push(rotateNode);
+    node = windowNode.push(sg.translate(4.05, 1.41766, 2.17008));
+    node.push(renderWindowXAxis);
 
+    node = windowNode.push(sg.translate(4.05, 1.41766, -0.72336));
+    node.push(renderWindowXAxis);
+
+    node = node.push(new SetUniformSGNode("u_enableObjectTexture", false));
+
+    phongShaderNode.push(noLight);
 
     //spawn trees around circle
     var treeNode = phongShaderNode;
@@ -468,7 +472,6 @@ function initDeer(parent,resources){
     //neck
     temp = body.push(sg.translate(0.35,0.9,0.35));
     temp = temp.push(sg.rotateX(-40));
-    //temp = temp.push(sg.shader(constColorShader.program))
     temp = temp.push(sg.scale(.25,.25,.5));
     temp.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
     //node.push(new NoAllocRenderSGNode(cylinderRenderer()));
@@ -649,7 +652,8 @@ loadResources({
   snowyTree: "../textures/snowy_tree.png",
   normalTree: "../textures/tree.png",
   wood: "../textures/wood_plank.jpg",
-  snowFloor: "../textures/snow_floor.jpg"
+  snowFloor: "../textures/snow_floor.jpg",
+  windowTex: "../textures/window.png"
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
 

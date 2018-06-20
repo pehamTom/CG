@@ -90,6 +90,7 @@ function createWebGL2Context(width, height) {
 }
 
 
+//TODO: ADD TEXTURES
 //convenience function for drawing a unit cube with specified color
 function cubeRenderer() {
     let s = 0.5;
@@ -140,7 +141,7 @@ function cubeRenderer() {
 
         let positionLoc = gl.getAttribLocation(shader, "a_position");
         let normalLoc = gl.getAttribLocation(shader, "a_normal");
-
+      
         setArrayBufferFloat(cubeVertexBuffer, positionLoc, 3);
 
         setArrayBufferFloat(cubeNormalBuffer, normalLoc, 3);
