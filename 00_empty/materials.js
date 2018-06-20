@@ -1,4 +1,7 @@
 
+/**
+* This file contains different materials. These are all based on empirical tests.
+**/
 var lightWoodMaterial = new Material([.227,.1137,.0392,1],
                                 [0.43,0.223,0.0863,1],
                                 [0, 0, 0, 1],
