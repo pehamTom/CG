@@ -173,16 +173,23 @@ updatePosition: function(){
       this.moveCameraToPoint = point;
       this.moveCameraTime = 0;
   },
-  lookAt: function(point) { //set camera to look at point
+  lookAt: function(point) {
+
+    //set camera to look at point
     this.deltaX = 0;
     this.deltaY = 0;	//don't rotate because of mouse movement
 
     var direction = vec3.subtract([], point, this.pos);
-vec3.normalize(direction, direction);
-this.pitch = Math.asin(direction[1]);
-this.yaw = Math.atan2(direction[2], direction[0]);
-},
-zoom: function(offSet) {
+    vec3.normalize(direction, direction);
+    this.pitch = Math.asin(direction[1]);
+    this.yaw = Math.atan2(direction[2], direction[0]);
+
+          this.direction[0] = Math.cos(this.pitch) * Math.cos(this.yaw);
+          this.direction[1] = Math.sin(this.pitch);
+          this.direction[2] = Math.cos(this.pitch) * Math.sin(this.yaw);
+    },
+
+  zoom: function(offSet) {
     this.fov += offSet*0.0001;
     if(this.fov < glMatrix.toRadian(1)) {
         this.fov = glMatrix.toRadian(1);
@@ -222,7 +229,7 @@ var cameraAnimator = {
     if(this.running){
       var currTime =timer.elapsed - this.startTime;
 
-      console.log(this.currEvent + " =>" + currTime + ": " + this.events[this.currEvent].timestamp);
+      // console.log(this.currEvent + " =>" + currTime + ": " + this.events[this.currEvent].timestamp);
 
       if(currTime >= this.events[this.currEvent].timestamp){
         this.events[this.currEvent].fire();
@@ -254,13 +261,6 @@ class CameraRotationEvent extends CameraEvent{
 
   }
   fire(){
-    camera.rotateBy(this.xangle,this.yangle,this.zangle,this.duration);
-  }
-}
-
-
-class CameraQuadRotationEvent extends CameraRotationEvent{
-  fire(){
     camera.rotateQuadBy(this.xangle, this.yangle,this.zangle,this.duration);
   }
 }
@@ -282,7 +282,7 @@ class CameraSetRotationPointEvent {
     this.point = point;
   }
   fire(){
-      camera.RotationPoint(this.pos);
+      camera.RotationPoint(this.point);
   }
 }
 
