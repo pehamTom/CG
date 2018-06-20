@@ -159,7 +159,7 @@ this.pitch = Math.asin(direction[1]);
 this.yaw = Math.atan2(direction[2], direction[0]);
 },
 zoom: function(offSet) {
-    this.fov += offSet*0.01;
+    this.fov += offSet*0.0001;
     if(this.fov < glMatrix.toRadian(1)) {
         this.fov = glMatrix.toRadian(1);
     } else if(this.fov > glMatrix.toRadian(70)) {
