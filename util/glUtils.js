@@ -1,15 +1,42 @@
+/**
+* This file contains various functions / objects / classes that are useful for
+* working with opengl
+**/
 
+/**
+* Function that binds a buffer to an attribute in the currently bound shader program
+* and activates it.
+* The function assumes that content is tightly packed (stride = 0 & offset = 0)
+* @param buffer - buffer to bind
+* @param bufferLoc - attribute location to bind buffer to
+* @param numElems - number of elements in the buffer (a buffer with triangle data
+*                    would have #floats/3 as the number of elements)
+**/
 function setArrayBufferFloat(buffer, bufferLoc, numElems) {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.vertexAttribPointer(bufferLoc, numElems, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(bufferLoc);
 }
 
-function setArrayBufferFloatInstanced(buffer, bufferLoc, numElems, numInstances) {
+/**
+* Similar to setArrayBufferFloat but sets the attribute divisor of the buffer being set
+* @param buffer - buffer to bind
+* @param bufferLoc - attribute location to bind buffer to
+* @param numElems - number of elements in the buffer (a buffer with triangle data
+*                    would have #floats/3 as the number of elements)
+* @param divisor - attribute divisor of the buffer (0 -> same for all instances; 1 -> different for every instance)
+**/
+function setArrayBufferFloatInstanced(buffer, bufferLoc, numElems, divisor) {
     setArrayBufferFloat(buffer, bufferLoc, numElems);
-    gl.vertexAttribDivisor(bufferLoc, numInstances);
+    gl.vertexAttribDivisor(bufferLoc, divisor);
 }
 
+/**
+* Sets up an array buffer whose data doesn't change. Creates a buffer, writes the data
+* and returns the bufferindex
+* @param bufferData - data to be written into the buffer
+* @returns bufferindex of the created buffer
+**/
 function setupStaticArrayBuffer(bufferData) {
     var buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -17,6 +44,11 @@ function setupStaticArrayBuffer(bufferData) {
     return buffer;
 }
 
+/**
+* Similar to setupStaticArrayBuffer but creates an ELEMENT_ARRAY_BUFFER instead
+* @param bufferData - data to be written into the buffer
+* @returns bufferindex of the created buffer
+**/
 function setUpStaticElementBuffer(bufferData) {
     buffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
@@ -24,62 +56,31 @@ function setUpStaticElementBuffer(bufferData) {
     return buffer;
 }
 
+/**
+* Write data into static array buffer. Sets buffer data with STATIC_DRAW flag
+* @param buffer - buffer to write data into
+* @param data - data to write
+**/
 function setStaticArrayBufferData(buffer, data) {
 	gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 	gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
 }
 
+/**
+* Write data into dynamic array buffer. Sets buffer data with DYNAMIC_DRAW flag
+* @param buffer - buffer to write data into
+* @param data - data to write
+**/
 function setDynamicArrayBufferData(buffer, data) {
 	gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 	gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
 }
 
-//shader class
-function ShaderProgram(vs, fs, varyings) {
-    this.program = createTransformFeedbackProgram(gl, vs, fs, varyings);
-
-    this.modelViewLoc = gl.getUniformLocation(this.program, 'u_modelView');
-    this.projectionLocation = gl.getUniformLocation(this.program, 'u_projection');
-    this.positionLocation = gl.getAttribLocation(this.program, "a_position");
-
-    this.setProjectionMat = function(projectionMatrix) {
-        gl.uniformMatrix4fv(this.projectionLocation, false, projectionMatrix);
-    };
-
-    this.setupModelView = function(viewMatrix, sceneMatrix) {
-        var modelViewMatrix = [];
-        mat4.mul(modelViewMatrix, viewMatrix, sceneMatrix);
-        gl.uniformMatrix4fv(this.modelViewLoc, false, modelViewMatrix);
-    }
-}
-
 /**
- * creates a program by the given vertex and fragment shader
- * @param gl GL context
- * @param vertex vertex shader or code
- * @param fragment fragment shader or code
- * @returns {WebGLProgram}
- */
-function createTransformFeedbackProgram(gl, vertex, fragment, varyings) {
-  var program = gl.createProgram();
-  gl.attachShader(program, typeof vertex === 'string' ? createShader(gl, vertex, gl.VERTEX_SHADER) : vertex);
-  gl.attachShader(program, typeof fragment === 'string' ? createShader(gl, fragment, gl.FRAGMENT_SHADER) : fragment);
-  if(varyings != null) {
-      gl.transformFeedbackVaryings(program, varyings, gl.SEPARATE_ATTRIBS);
-  }
-  gl.linkProgram(program);
-  var linked = gl.getProgramParameter(program, gl.LINK_STATUS);
-  if (!linked) {
-    // something went wrong with the link
-    var lastError = gl.getProgramInfoLog(program);
-    console.error('Error in program linking:' + lastError);
-    gl.deleteProgram(program);
-    return null;
-  }
-  return program;
-}
-
-
+* Create WebGL2 context. This is actually pretty much identical to the createWebGlContext
+* function in the lab framework. A webgl2 context is needed for the particle effects
+* as they are drawn using instanced rendering, a feature not present in webgl1
+**/
 function createWebGL2Context(width, height) {
   var canvas = document.createElement('canvas');
   canvas.width = width || 400;
@@ -91,7 +92,7 @@ function createWebGL2Context(width, height) {
 
 
 //TODO: ADD TEXTURES
-//convenience function for drawing a unit cube with specified color
+//convenience function for drawing a unit cube.
 function cubeRenderer() {
     let s = 0.5;
 
@@ -113,7 +114,7 @@ function cubeRenderer() {
         0,1,0, 0,1,0, 0,1,0, 0,1,0
     ])
 
-    var cubeIndices =  new Float32Array([
+    var cubeIndices =  new Uint16Array([
        0,1,2, 0,2,3,
        4,5,6, 4,6,7,
        8,9,10, 8,10,11,
@@ -124,14 +125,21 @@ function cubeRenderer() {
 
     var cubeVertexBuffer, cubeNormalBuffer, cubeIndexBuffer;
 
+    /**
+    * Initiallize the buffers on the gpu
+    **/
     function init() {
         cubeVertexBuffer = setupStaticArrayBuffer(cubeVertices);
 
-
         cubeNormalBuffer = setupStaticArrayBuffer(cubeNormals);
 
-        cubeIndexBuffer = setUpStaticElementBuffer(new Uint16Array(cubeIndices));
+        cubeIndexBuffer = setUpStaticElementBuffer(cubeIndices);
     }
+
+    /**
+    * This function does the actual rendering. This function can be passed to a
+    * RenderSGNode which takes care of the correct rendering
+    **/
     return function(context) {
         if(cubeVertexBuffer == null) {
             init();
@@ -151,13 +159,35 @@ function cubeRenderer() {
     }
 }
 
+/**
+* This SGNode is a slight improvement on the SGNode provided by the framework. The
+* RenderSGNode allocates storage space for a new matrix each time the render function
+* is called. This SGNode caches the matrices in a variable whose storage space is reused.
+* Usually this wouldn't really matter, but since the particle system uses quite some storage
+* space, when many allocations happen per frame the browsers garbage collector is called
+* often which kills the applications performance and introduces quite noticable lags.
+*
+* Furthermore this Node disables the vertexAttribArray for the texture coordinates
+* in the shader after rendering. If we wouldn't disable the texture attribute the
+* attribute would remain valid and objects that do not provide texture coordinates
+* wouldn't be draw correctly even if the texture coordinates are never used.
+**/
 class NoAllocRenderSGNode extends RenderSGNode {
+
+    /**
+    * Constructor that creates the matrices for caching
+    **/
     constructor(renderer, children) {
         super(renderer, children)
         this.modelView = mat4.create();
         this.normalMatrix = mat3.create();
     }
 
+    /**
+    * Works similar to setTransformationUniforms of the RenderSGNode but calculates
+    * the matrix multiplications without creating new matrices
+    * @param context - the webgl context
+    **/
     setTransformationUniforms(context) {
         //set matrix uniforms
         mat4.multiply(this.modelView, context.viewMatrix, context.sceneMatrix);
@@ -170,16 +200,28 @@ class NoAllocRenderSGNode extends RenderSGNode {
         gl.uniformMatrix4fv(gl.getUniformLocation(shader, 'u_projection'), false, projectionMatrix);
     }
 
+    /**
+    * Renders underlying object and disables texture coordinates afterwards
+    * @param context - the webgl context
+    **/
     render(context){
         super.render(context);
         gl.disableVertexAttribArray(gl.getAttribLocation(context.shader, "a_texCoord"));
     }
 }
+
 /**
-  *Scenegraph node for transformations that should change with time
-  *@param calcMatrixFunc function that takes no parameters and returns a matrix
-  */
+  * Scenegraph node for transformations that should change with time (they don't have to).
+  * This is done by providing a function to the SGNode with which to recompute the
+  * transformation matrix each frame.
+  **/
 class AnimationSGNode extends SGNode {
+
+    /**
+    * Construcor
+    * @param calcMatrixFunc function that takes no parameters and returns a matrix (mat4)
+    * @param children
+    **/
     constructor(calcMatrixFunc, children) {
         super(children);
         this.calcMatrix = calcMatrixFunc;
@@ -189,6 +231,7 @@ class AnimationSGNode extends SGNode {
     render(context) {
         var previous = context.sceneMatrix;
 
+        //compute the transformation matrix before rendering
         if(previous === null) {
             context.sceneMatrix = this.calcMatrix();
         } else {
@@ -245,6 +288,7 @@ var doorAnimator = function(endTime) {
         return transForm;
     }
 }
+
 var transAnimator = function(startTime,duration,destination){
   var endTime = duration;
   var elapsed = 0;
@@ -280,6 +324,7 @@ var transAnimator = function(startTime,duration,destination){
 
 
 var genericAnimator = function(startTime,reverseDuration,duration, rotpoint, angles){
+
   var endTime = duration;
   var duration = duration;
   var reverseDuration = reverseDuration;
@@ -352,7 +397,8 @@ var genericAnimator = function(startTime,reverseDuration,duration, rotpoint, ang
 var identityMat = mat4.create();
 
 /**
-*returns matrix that performs rotation around points*/
+* returns matrix that performs rotation around points
+**/
 let cachedMat = [];
 let cachedVec = [];
 function rotateAroundPoint(point, rad, rotation){
@@ -365,6 +411,12 @@ function rotateAroundPoint(point, rad, rotation){
     return transForm;
 }
 
+/**
+* convenience function that creates a MaterialSGNode and sets it's material
+* properties to those of the material being passed into the function
+* @param material - material to copy properties from
+* @return a new MaterialSGNode
+**/
 function initMaterialSGNode(material) {
 
     mat = new MaterialSGNode();
@@ -376,6 +428,14 @@ function initMaterialSGNode(material) {
     return mat;
 }
 
+/**
+* Constructor function for a material (call with new to create material)
+* @param ambient - vec4
+* @param diffuse - vec4
+* @param specular - vec4
+* @param emission - vec4
+* @param shininess - float
+**/
 function Material(ambient, diffuse, specular, emission, shininess) {
     this.ambient = ambient;
     this.diffuse = diffuse;
@@ -384,6 +444,12 @@ function Material(ambient, diffuse, specular, emission, shininess) {
     this.shininess = shininess;
 }
 
+/**
+* convenience function that creates a material that is not affected by light
+* sources. This is achieved by setting the materials emission to the color
+* of the parameter and all other material properties tp [0,0,0,1] (black)
+* @param color - vec4 to set the materials emission property to
+**/
 function constantColorMaterial(color) {
     return new Material([0,0,0,1], [0,0,0,1], [0,0,0,1], color, 0);
 }
