@@ -1,3 +1,4 @@
+
 precision mediump float;
 
 attribute vec3 a_position;
@@ -19,6 +20,7 @@ varying vec3 v_normalVec;
 varying vec3 v_eyeVec;
 varying vec3 v_lightVec;
 varying vec3 v_light2Vec;
+
 varying vec3 v_spotLightVec;
 
 varying vec2 v_texCoord;

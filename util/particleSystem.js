@@ -66,6 +66,7 @@ function emitterRenderer(emitter) {
 		let texLoc = gl.getAttribLocation(phongShader, 'a_texCoord')
 	    gl.vertexAttribDivisor(texLoc, 0);
 
+
 		gl.uniform3fv(angularVelLoc, [0,0,0]); //reset Vortex so other particles aren't affected
 	}
 }

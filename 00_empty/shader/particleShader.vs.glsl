@@ -9,7 +9,6 @@ attribute float a_time;
 attribute vec3 a_velocity;
 //maximum life time of the particle
 attribute float a_lifeTime;
-
 attribute vec2 a_texCoord;
 
 varying vec4 v_color;
