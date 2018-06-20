@@ -117,13 +117,11 @@ updatePosition: function(){
           vec3.add(this.pos, this.pos, vec3.scale(deltaPos, this.direction, -timer.delta*sensitivity));
       }
 
+      vec3.cross(this.rightVec, this.direction, this.up);
+      vec3.normalize(this.rightVec, this.rightVec);
       if(this.movingLeft) {
-          vec3.cross(this.rightVec, this.up, this.direction);
-          vec3.normalize(this.rightVec, this.rightVec);
-          vec3.add(this.pos, this.pos, vec3.scale(deltaPos, this.rightVec, timer.delta*sensitivity));
+          vec3.add(this.pos, vec3.scale(deltaPos, this.rightVec, -timer.delta*sensitivity), this.pos);
       } else if(this.movingRight) {
-          vec3.cross(this.rightVec, this.direction, this.up);
-          vec3.normalize(this.rightVec, this.rightVec);
           vec3.add(this.pos, this.pos, vec3.scale(deltaPos,this.rightVec, timer.delta*sensitivity));
       }
 
