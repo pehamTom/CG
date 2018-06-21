@@ -1,7 +1,3 @@
-/**
- * a phong shader implementation
- * Created by Samuel Gratzl on 29.02.2016.
- */
 precision mediump float;
 
 /**
@@ -32,8 +28,13 @@ uniform Light u_spotLight;
 uniform vec3 u_spotLightPos;
 uniform vec3 u_spotLightDirection;
 uniform float u_spotLightAngle;
+//flag that indicates if spotlight should be considered in shading
 uniform bool u_spotLightActive;
+
+//texture for this fragment
 uniform sampler2D u_tex;
+
+//flag that indicates if texture should be applied
 uniform bool u_enableObjectTexture;
 
 //varying vectors for light computation
@@ -67,9 +68,8 @@ vec4 calculateSimplePointLight(Light light, Material material, vec3 lightVec, ve
 	vec4 c_amb  = clamp(light.ambient * material.ambient, 0.0, 1.0);
 	vec4 c_diff = clamp(diffuse * light.diffuse * material.diffuse, 0.0, 1.0);
 	vec4 c_spec = clamp(spec * light.specular * material.specular, 0.0, 1.0);
-	vec4 c_em   = material.emission;
 
-	return c_amb + c_diff + c_spec + c_em;
+	return c_amb + c_diff + c_spec;
 }
 
 void main() {
@@ -79,13 +79,25 @@ void main() {
   {
 		textureColor = texture2D(u_tex, v_texCoord);
 	}
-  
+
 	gl_FragColor =
 		calculateSimplePointLight(u_light, u_material, v_lightVec, v_normalVec, v_eyeVec, textureColor)
 		+ calculateSimplePointLight(u_light2, u_material, v_light2Vec, v_normalVec, v_eyeVec, textureColor);
 
+	//calculate the angle between the direction vector of the spotlight and the
+	//direction vector (interpolated) from fragment to the spotlight position
 	float angleToSpotLight = acos(dot(u_spotLightDirection, (-v_eyeVec)) / (length(u_spotLightDirection) * length(v_eyeVec)));
+
+	//if angleToSpotLight is within the radius of the cone of the spotlight
+	//then shade the fragment also with the spotlight
 	if(u_spotLightActive && angleToSpotLight < u_spotLightAngle) {
+		//the color is also weighted so that fragments that are close to the center
+		//of the cone are brighter. This looks more natural
 		gl_FragColor += 3.0 * (1.0 - (angleToSpotLight / u_spotLightAngle)) * calculateSimplePointLight(u_spotLight, u_material, v_spotLightVec, v_normalVec, v_eyeVec, textureColor);
+	}
+
+	if(! u_enableObjectTexture)
+  {
+		gl_FragColor += u_material.emission;
 	}
 }

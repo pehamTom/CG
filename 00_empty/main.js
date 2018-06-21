@@ -50,8 +50,8 @@ document.addEventListener("keypress", function(event) {
 
         case "O":
         case "o": {
-            spotLight.toggle();
-        } break;
+          spotLight.toggle();
+        }
     }
 });
 
@@ -106,14 +106,15 @@ function init(resources) {
     phongShader = createProgram(gl, resources.phongVs, resources.phongFs);
 
     var fireEmitter= new PlaneEmitter([0,0,0], 3000, 1300, 0.01, [0.0,1.3,0], 0.05,
-        0.01, [1,0,0,1], [1, 0.7, 0.3, 0.9], new FireParticle(null), 0.7, [.6,0,0], [0,0,.6]);
+        0.01, fireStartMaterial, fireEndMaterial, new FireParticle(null), 0.7, [.6,0,0], [0,0,.6]);
     var smokeEmitter = new SphereEmitter([1.9, 7.27818, 4.215], 1000, 3000, 0.0001, [0,1,0], 0.08,
-        0.050, [0.0,0.0,0.0,1.0], [0.8, 0.8, 0.8, 0.1], new Particle(null), 1, 0.3, 1);
-    var blackHoleParticleEmitter = new CircleEmitter([0, 0, 0], 1000, 2000, 0.0001, [0,0,0], 5,
-        0.01, [0.02,0.05,0.5,1], [0.7, 0.1, 0.5, 1], new Particle(null), 0, [1,0,0], [0,1,0], 200, -0.4);
+        0.050, smokeStartMaterial, smokeEndMaterial, new Particle(null), 1, 0.3, 1);
+    var blackHoleParticleEmitter = new CircleEmitter([0, 0, 0], 2000, 1100, 0.0001, [0,0,0], 5,
+        0.01, blackHoleStartMaterial, blackHoleEndMaterial, new Particle(null), 0, [1,0,0], [0,1,0], 200, -0.95);
 
-    blackHoleParticleEmitter.setVortex([0,0,0], [0,0,0.15]);
-    var snowEmitter = ps.createSnowEmitter([0, 0, 0], 20, 20, 5000);
+    blackHoleParticleEmitter.setVortex([0,0,0], [0,0,0.4]);
+
+    var snowEmitter = ps.createSnowEmitter([0, 0, 0], 20, 20, 5000, 200);
 
     //emitter need to be updated every frame
     updateQueue.push(fireEmitter);
@@ -236,7 +237,7 @@ function init(resources) {
 
     //setup moon
     //the moon emits light, that's why it has a constant color (no specular or diffuse components)
-    node = initMaterialSGNode(constantColorMaterial([0.5, 1, 0.2, 1]));
+    node = initMaterialSGNode(constantColorMaterial([0.9, 0.9, 0.3, 1]));
     node = phongShaderNode.push(node);
     node = node.push(new AnimationSGNode(function() {
       //animate the moon slowly rise on the horizon
@@ -248,7 +249,7 @@ function init(resources) {
 
     //set light source to the center of the moon
   	let moonLight = new LightSGNode([0, 0, 0]);
-  	moonLight.ambient = [0.3, 0.3, 0.3, 1.0];
+  	moonLight.ambient = [0.1, 0.1, 0.1, 1.0];
   	moonLight.diffuse = [0.8, 0.6, 0.8, 1.0];
   	moonLight.specular = [0.8, 0.6, 0.8, 1.0];
   	moonLight.uniform = 'u_light2';
@@ -294,7 +295,6 @@ function init(resources) {
     treeNode = treeNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
     var trees = [];
     for(let i = 0; i < 500; i++) {
-
         let radius = 50;
         let x = Math.cos(i);
     		let z = Math.sin(i);
@@ -302,7 +302,7 @@ function init(resources) {
     		z *= radius;
         let centerDist = [x, 0, z];
         //calculate random offset along the direction vector from the center of the circle
-        vec3.scale(centerDist, centerDist, (Math.random()*2-1)*0.5);
+        vec3.scale(centerDist, centerDist, (Math.random()*2-1)*0.7);
         vec3.add(centerDist, [x, 3.5, z], centerDist);
         trees.push(new Billboard(centerDist, 4.5, 7));
     }
@@ -315,7 +315,11 @@ function init(resources) {
     node = phongShaderNode.push(node);
     let houseNode = node;
 	   node = node.push(sg.translate(2, 1.5, 0));
-    houseNode.push(sg.draw(resources.house));
+     houseNode.push(sg.draw(resources.house));
+
+    //test
+    // particleShaderNode.push(fireLight);
+    particleShaderNode.push(spotLight);
 
     node = houseNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
     node = node.push(new AdvancedTextureSGNode(resources.carpetTex));
@@ -328,7 +332,8 @@ function init(resources) {
     let doorNode = houseNode.push(new AnimationSGNode(doorAnimator(3000)));
     node = doorNode.push(sg.scale(0.08, 1.72712,1.4467));
     node = node.push(initMaterialSGNode(darkWoodMaterial));
-    node = node.push(new NoAllocRenderSGNode(cubeRenderer([0.4,0.2,0,1])));
+    node = node.push(new NoAllocRenderSGNode(cubeRenderer()));
+
 
     //setup inside doorknob relative to door
     node = doorNode.push(initMaterialSGNode(goldMaterial));
@@ -381,8 +386,16 @@ function init(resources) {
     node = houseNode.push(initMaterialSGNode(metalMaterial));
     node = node.push(sg.translate(-2.5, 0, -3));
     node = node.push(sg.scale(0.3, 0.35, 0.3));
-    node = node.push(sg.rotateY(90));
-    node = node.push(new RenderSGNode(resources.table));
+    let tableNode = node.push(sg.rotateY(90));
+    node = tableNode.push(new RenderSGNode(resources.table));
+
+    node = tableNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
+    node = node.push(new AdvancedTextureSGNode(resources.newspaper));
+    node = node.push(sg.translate(0, 2.49, 1));
+    node = node.push(sg.rotateX(90));
+    node = node.push(new NoAllocRenderSGNode(makeRect(0.6, 1)));
+    node = node.push(new SetUniformSGNode("u_enableObjectTexture", false));
+
 
     //setup chair relative to houseNode
     node = houseNode.push(initMaterialSGNode(lightWoodMaterial));
@@ -437,8 +450,6 @@ function init(resources) {
     initMove();
     cameraAnimator.begin();
 }
-
-
 
 /**
  * render one frame
@@ -497,7 +508,9 @@ loadResources({
   wood: "../textures/wood_plank.jpg",
   snowFloor: "../textures/snow_floor.jpg",
   windowTex: "../textures/window.png",
-  carpetTex: "../textures/carpet.jpg"
+  carpetTex: "../textures/carpet.jpg",
+  newspaper: "../textures/newspaper.jpg",
+  bookshelfTex: "../textures/bookshelf.jpg"
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
 

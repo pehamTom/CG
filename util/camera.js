@@ -15,9 +15,8 @@ var camera = {
     deltaX:0,
     deltaY:0,
     animatedAngle:0,
-    rightVec: [0,0,0],
-    fov:glMatrix.toRadian(45),
-
+    rightVec: vec3.normalize([], vec3.cross([], vec3.negate([], startPos), [0,1,0])),
+    fov:glMatrix.toRadian(50),
     isFree: true,
 
     destinationQuat: quat.create(),
@@ -122,14 +121,12 @@ updatePosition: function(){
           vec3.add(this.pos, this.pos, vec3.scale(deltaPos, this.direction, -timer.delta*sensitivity));
       }
 
+      vec3.cross(this.rightVec, this.direction, this.up);
+      vec3.normalize(this.rightVec, this.rightVec);
       if(this.movingLeft) {
-          vec3.cross(this.rightVec, this.up, this.direction);
-          vec3.normalize(this.rightVec, this.rightVec);
-          vec3.add(this.pos, this.pos, vec3.scale(deltaPos, this.rightVec, timer.delta*sensitivity));
+          vec3.add(this.pos, vec3.scale(deltaPos, this.rightVec, -timer.delta*sensitivity), this.pos);
       } else if(this.movingRight) {
-          vec3.cross(this.rightVec, this.up, this.direction);
-          vec3.normalize(this.rightVec, this.rightVec);
-          vec3.sub(this.pos, this.pos, vec3.scale(deltaPos,this.rightVec, timer.delta*sensitivity));
+          vec3.add(this.pos, this.pos, vec3.scale(deltaPos,this.rightVec, timer.delta*sensitivity));
       }
 
       //rotation using euler angles
@@ -179,23 +176,16 @@ updatePosition: function(){
       this.moveCameraToPoint =  vec3.sub([],point,this.pos);
       this.moveCameraToTime = 0;
   },
-  lookAt: function(point) {
-
-    //set camera to look at point
+  lookAt: function(point) { //set camera to look at point
     this.deltaX = 0;
     this.deltaY = 0;	//don't rotate because of mouse movement
 
     var direction = vec3.subtract([], point, this.pos);
-    vec3.normalize(direction, direction);
-    this.pitch = Math.asin(direction[1]);
-    this.yaw = Math.atan2(direction[2], direction[0]);
-
-          this.direction[0] = Math.cos(this.pitch) * Math.cos(this.yaw);
-          this.direction[1] = Math.sin(this.pitch);
-          this.direction[2] = Math.cos(this.pitch) * Math.sin(this.yaw);
-    },
-
-  zoom: function(offSet) {
+vec3.normalize(direction, direction);
+this.pitch = Math.asin(direction[1]);
+this.yaw = Math.atan2(direction[2], direction[0]);
+},
+zoom: function(offSet) {
     this.fov += offSet*0.0001;
     if(this.fov < glMatrix.toRadian(1)) {
         this.fov = glMatrix.toRadian(1);
@@ -238,7 +228,7 @@ var cameraAnimator = {
     if(this.running){
       var currTime =timer.elapsed - this.startTime;
 
-      // console.log(this.currEvent + " =>" + currTime + ": " + this.events[this.currEvent].timestamp);
+      console.log(this.currEvent + " =>" + currTime + ": " + this.events[this.currEvent].timestamp);
 
       if(currTime >= this.events[this.currEvent].timestamp){
 
@@ -280,7 +270,6 @@ class CameraRotationEvent extends CameraEvent{
 
   }
   fire(){
-    console.log(this);
     camera.rotateQuadBy(this.xangle, this.yangle,this.zangle,this.duration);
   }
 }
@@ -313,7 +302,6 @@ class CameraSetRotationPointEvent {
     this.point = point;
   }
   fire(){
-
       camera.RotationPoint(vec3.copy([],this.point));
 
   }

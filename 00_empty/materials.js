@@ -38,6 +38,43 @@ var metalMaterial = new Material([0.1, 0.1, 0.1, 1.0],
 								[0, 0, 0, 1],
 								100);
 
+var smokeStartMaterial = new Material([0.05, 0.05, 0.05, 1],
+                                      [0.1, 0.1, 0.1, 1],
+                                      [0, 0, 0, 1],
+                                      [0, 0, 0, 1],
+                                      0);
+
+var smokeEndMaterial = new Material([0.05, 0.05, 0.05, 0.1],
+                                      [0.1, 0.1, 0.1, 0.1],
+                                      [0, 0, 0, 0.1],
+                                      [0, 0, 0, 0],
+                                      0);
+
+var fireEndMaterial = new Material([0, 0, 0, 1],
+                                [0, 0, 0, 1],
+                                [0, 0, 0, 1],
+                                [1, 0, 0, 1],
+                                0);
+
+var fireStartMaterial = new Material([0, 0, 0, 1],
+                                [0, 0, 0, 1],
+                                [0, 0, 0, 1],
+                                [1, 1, 0, 1],
+                                0);
+
+
+var blackHoleStartMaterial = new Material([0, 0, 0, 1],
+                                [0, 0, 0, 1],
+                                [0, 0, 0, 1],
+                                [0.02,0.05,0.5,1],
+                                0);
+
+var blackHoleEndMaterial = new Material([0, 0, 0, 1],
+                                [0, 0, 0, 1],
+                                [0, 0, 0, 1],
+                                [0.7, 0.1, 0.5, 1],
+                                0);
+
 var glassMaterial = new Material([0, 0, 0, 0],
 								[0.9, 0.9, 0.9, 0.1],
 								[0.9, 0.9, 0.9, 0.1],

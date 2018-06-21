@@ -26,6 +26,6 @@ class SpotLightSgNode extends LightSGNode {
   }
 
   toggle() {
-      this.active = !this.active;
+      this.active = ! this.active;
   }
 }

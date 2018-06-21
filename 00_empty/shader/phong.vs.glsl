@@ -20,7 +20,6 @@ varying vec3 v_normalVec;
 varying vec3 v_eyeVec;
 varying vec3 v_lightVec;
 varying vec3 v_light2Vec;
-
 varying vec3 v_spotLightVec;
 
 varying vec2 v_texCoord;
@@ -30,12 +29,12 @@ void main() {
 
   v_normalVec = u_normalMatrix * a_normal;
 
-  v_eyeVec = -eyePosition.xyz;
+	//ignore homogenous coordinate in camera space
+	v_eyeVec = -eyePosition.xyz;
 
+	//calculate vector from vertex to light
 	v_lightVec = u_lightPos - eyePosition.xyz;
-
 	v_light2Vec = u_light2Pos - eyePosition.xyz;
-
 	v_spotLightVec = u_spotLightPos - eyePosition.xyz;
 
 	v_texCoord = a_texCoord;
