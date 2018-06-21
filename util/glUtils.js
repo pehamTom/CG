@@ -151,109 +151,6 @@ function cubeRenderer() {
     }
 }
 
-function cylinderRenderer() {
-
-    var cylinderVertices = new Float32Array([
-      0,0,0
-      ,1.00	,0,0.00
-      ,0.98	,0,0.17
-      ,0.94	,0,0.34
-      ,0.87	,0,0.50
-      ,0.77	,0,0.64
-      ,0.64	,0,0.77
-      ,0.50	,0,0.87
-      ,0.34	,0,0.94
-      ,0.17	,0,0.98
-      ,0.00	,0,1.00
-      ,-0.17,0,	0.98
-      ,-0.34,0,	0.94
-      ,-0.50,0,	0.87
-      ,-0.64,0,	0.77
-      ,-0.77,0,	0.64
-      ,-0.87,0,	0.50
-      ,-0.94,0,	0.34
-      ,-0.98,0,	0.17
-      ,-1.00,0,	0.00
-      ,-0.98,0,	-0.17
-      ,-0.94,0,	-0.34
-      ,-0.87,0,	-0.50
-      ,-0.77,0,	-0.64
-      ,-0.64,0,	-0.77
-      ,-0.50,0,	-0.87
-      ,-0.34,0,	-0.94
-      ,-0.17,0,	-0.98
-      ,0.00	,0,-1.00
-      ,0.17	,0,-0.98
-      ,0.34	,0,-0.94
-      ,0.50	,0,-0.87
-      ,0.64	,0,-0.77
-      ,0.77	,0,-0.64
-      ,0.87	,0,-0.50
-      ,0.94	,0,-0.34
-      , 0.98,0,	-0.17
-
-    ]);
-    var cylinderIndices =  new Uint16Array([
-      ,0,2,1 ,0,3,2 ,0,4,3
-      ,0,5,4 ,0,6,5
-      ,0,7	,6
-      ,0,8	,7
-      ,0,9	,8
-      ,0,10,	9
-      ,0,11,	10
-      ,0,12,	11
-      ,0,13,	12
-      ,0,14,	13
-      ,0,15,	14
-      ,0,16,	15
-      ,0,17,	16
-      ,0,18,	17
-      ,0,19,	18
-      ,0,20,	19
-      ,0,21,	20
-      ,0,22,	21
-      ,0,23,	22
-      ,0,24,	23
-      ,0,25,	24
-      ,0,26,	25
-      ,0,27,	26
-      ,0,28,	27
-      ,0,29,	28
-      ,0,30,	29
-      ,0,31,	30
-      ,0,32,	31
-      ,0,33,	32
-      ,0,34, 33,
-      ,0,35,34,
-      ,0,36,35,
-      ,0,36,1
-
-    ]);
-
-    var cylinderVertexBuffer, cylinderIndexBuffer;
-
-    function init() {
-        cylinderVertexBuffer = setupStaticArrayBuffer(cylinderVertices);
-
-        cylinderIndexBuffer = setUpStaticElementBuffer(cylinderIndices);
-    }
-    return function(context) {
-        if(cylinderVertexBuffer == null) {
-            init();
-        }
-        let shader = context.shader;
-        let gl = context.gl;
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, cylinderVertexBuffer);
-        let positionLoc = gl.getAttribLocation(shader, "a_position");
-        gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false,0,0) ;
-        gl.enableVertexAttribArray(positionLoc);
-
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cylinderIndexBuffer);
-        gl.drawElements(gl.TRIANGLES, cylinderIndices.length, gl.UNSIGNED_SHORT, 0);
-    }
-}
-
 class NoAllocRenderSGNode extends RenderSGNode {
     constructor(renderer, children) {
         super(renderer, children)
@@ -348,6 +245,109 @@ var doorAnimator = function(endTime) {
         return transForm;
     }
 }
+var transAnimator = function(startTime,duration,destination){
+  var endTime = duration;
+  var elapsed = 0;
+  var animate = false;
+  var destination = destination;
+  var start = vec3.create();
+  var transformation = vec3.create();
+
+  timeEventQueue.push({timeStamp: startTime, fire: function(){ animate = true}});
+
+  resetQueue.push({ reset:function(){
+    elapsed = 0;
+  }});
+
+  function reverse() {
+      const h = start;
+      start = destination;
+      destination = h;
+      elapsed = 0;
+  };
+
+  return function(){
+    if(animate)
+    elapsed += timer.delta;
+    var t = elapsed/duration;
+    if(t > 1){
+      reverse();
+    }
+    vec3.lerp(transformation,start,destination,t)
+    return glm.translate(transformation[0],transformation[1],transformation[2]);
+  }
+}
+
+
+var genericAnimator = function(startTime,reverseDuration,duration, rotpoint, angles){
+  var endTime = duration;
+  var duration = duration;
+  var reverseDuration = reverseDuration;
+  var elapsed = 0;
+  var isreversing = false;
+  var rotateQuat = quat.create();
+  var beginQuat = quat.create();
+  var interpolatedQuat = quat.create();
+  var inversRotpoint = vec3.negate([], rotpoint);
+  var trans1 = glm.translate(inversRotpoint[0],inversRotpoint[1],inversRotpoint[2]);
+  var trans2 = glm.translate(rotpoint[0],rotpoint[1],rotpoint[2]);
+
+  var rotate = mat4.create();
+  var transForm = mat4.create();
+  var animate = false;
+  timeEventQueue.push({timeStamp: startTime, fire: function(){ animate = true}});
+
+  quat.identity(rotateQuat);
+
+  quat.rotateX(rotateQuat,rotateQuat, angles[0]*Math.PI/180);
+  quat.rotateY(rotateQuat,rotateQuat, angles[1]*Math.PI/180);
+  quat.rotateZ(rotateQuat,rotateQuat, angles[2]*Math.PI/180);
+  quat.normalize(rotateQuat,rotateQuat);
+
+  resetQueue.push({reset: function() {
+      elapsed = 0;
+      quat.rotateX(rotateQuat,quat.create(), angles[0]*Math.PI/180);
+      quat.rotateY(rotateQuat,rotateQuat, angles[1]*Math.PI/180);
+      quat.rotateZ(rotateQuat,rotateQuat, angles[2]*Math.PI/180);
+      quat.normalize(rotateQuat,rotateQuat);
+      beginQuat = quat.create();
+      animate = false;
+  }});
+  function reverse() {
+      if(isreversing){
+        endTime = reverseDuration;
+        isreversing = false;
+      }else{
+        endTime = duration;
+        isreversing = true;
+      }
+      const h = beginQuat;
+      beginQuat = rotateQuat;
+      rotateQuat = h;
+      elapsed = 0;
+  };
+
+  return function() {
+      if(! animate)return glm.translate(0,0,0);
+
+      elapsed += timer.delta;
+      let t = elapsed / endTime;
+      if(t > 1 ) {
+          reverse();
+          t = 0;
+      };
+      quat.slerp(interpolatedQuat, beginQuat, rotateQuat, t);
+      mat4.fromQuat(rotate, interpolatedQuat);
+      mat4.copy(transForm, identityMat);
+
+      mat4.multiply(transForm, transForm, trans2);
+      mat4.multiply(transForm, transForm, rotate);
+      mat4.multiply(transForm, transForm, trans1);
+      return transForm;
+
+  }
+}
+
 
 var identityMat = mat4.create();
 
