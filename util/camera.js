@@ -109,6 +109,7 @@ updatePosition: function(){
        }
        this.moveCameraToTime += timeElapsed;
     }
+      console.log(camera.pos);
   },
   freeMovement:function(){
       var sensitivity = 0.005;
@@ -248,7 +249,6 @@ var cameraAnimator = {
           this.running = false;
         }
       }
-              console.log(currTime+":"+this.events[this.currEvent].timestamp + ":" + this.currEvent);
     }
   }
 };
@@ -320,7 +320,7 @@ class CameraLookAtEvent{
 function initMove(){
 
   //start Position
-  cameraAnimator.addEvent(new CameraMoveEvent([0,1.7,-4],10,0));
+  cameraAnimator.addEvent(new CameraMoveEvent([0,1.7,-4],1,0));
   cameraAnimator.addEvent(new CameraLookAtEvent([0,1.7,5],10));
   cameraAnimator.addEvent(new CameraSetRotationPointEvent([0,1.7,-4],0));
   cameraAnimator.addEvent(new CameraRotationEvent(0,-70,0,10,20));
@@ -354,15 +354,35 @@ function initMove(){
 
   //Scene 3 The Run
   cameraAnimator.addEvent(new CameraMoveEvent([4,1.6,-3.5],1,19000));
-  cameraAnimator.addEvent(new CameraLookAtEvent([8,1.6,-3.5],19010));
+  cameraAnimator.addEvent(new CameraLookAtEvent([6,1.6,-1.5],19010));
   cameraAnimator.addEvent(new CameraSetRotationPointEvent([4,1.6,-3.5],19020));
 
-  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([3,1.6,-6],1000,19100));
-  cameraAnimator.addEvent(new CameraRotationEvent(0,90,20,1000,19100));
+  var spotLightEvent = class extends CameraEvent{
+      constructor(timestamp){
+        super(0,timestamp);
+      }
+      fire(){
+        spotLight.toggle();
+      }
 
-  console.log(cameraAnimator.events);
+  };
 
-  // cameraAnimator.addEvent(new CameraRotationEvent(0,90,0,1000,19000));
+  cameraAnimator.addEvent(new spotLightEvent(21000));
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([6,1.6,-3.5],1000,19100));
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([6,1.6,-1],1000,20800));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,120,20,1200,19100));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,-80,-20,500,20600));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,-80,-5,500,21100));
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([8,1.6,10],2000,21800));
+  // cameraAnimator.addEvent(new CameraRotationPointMoveEvent([8,1.6,10],2000,21800));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,90,0,1000,19000));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,15,0,1000,22500));
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([17,1.6,40],5000,23800));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,90,30,750,23000));
+    cameraAnimator.addEvent(new CameraRotationEvent(0,90,00,750,23750));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,-90,-30,750,25000));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,-90,0,750,25750));
+  //add Camera Animator to update Queue
   updateQueue.push(cameraAnimator);
-
+  console.log(cameraAnimator.events);
 }
