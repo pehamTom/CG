@@ -47,6 +47,7 @@ update: function(){
 
     this.updatePosition();
   }
+
 },
 updateRotation: function(){
   var timeElapsed = timer.delta;
@@ -109,9 +110,9 @@ updatePosition: function(){
        }
        this.moveCameraToTime += timeElapsed;
     }
-      console.log(camera.pos);
   },
   freeMovement:function(){
+
       var sensitivity = 0.005;
       //translation
 
@@ -203,7 +204,7 @@ updatePosition: function(){
     }
 },
 reset: function() {
-    this.pos = vec3.copy([], startPos);
+    this.pos = vec3.copy([], [0,0,0]);
     this.up = [0, 1, 0];
     this.fov = glMatrix.toRadian(50);
     this.rotationDuration= 0;
@@ -223,7 +224,7 @@ var cameraAnimator = {
   begin:function(){
     this.currEvent = 0;
     this.startTime = timer.elapsed;
-
+    camera.reset();
     this.running = true;
     camera.isFree = false;
   },
@@ -250,6 +251,14 @@ var cameraAnimator = {
         }
       }
     }
+  },
+  reset: function(){
+      this.currEvent = 0;
+      this.running = false;
+      this.currTime = 0;
+      this.startTime = 0;
+
+
   }
 };
 
@@ -271,6 +280,7 @@ class CameraRotationEvent extends CameraEvent{
 
   }
   fire(){
+    console.log(this);
     camera.rotateQuadBy(this.xangle, this.yangle,this.zangle,this.duration);
   }
 }
@@ -303,7 +313,9 @@ class CameraSetRotationPointEvent {
     this.point = point;
   }
   fire(){
-      camera.RotationPoint(this.point);
+
+      camera.RotationPoint(vec3.copy([],this.point));
+
   }
 }
 
@@ -319,15 +331,18 @@ class CameraLookAtEvent{
 
 function initMove(){
 
+
   //start Position
   cameraAnimator.addEvent(new CameraMoveEvent([0,1.7,-4],1,0));
-  cameraAnimator.addEvent(new CameraLookAtEvent([0,1.7,5],10));
-  cameraAnimator.addEvent(new CameraSetRotationPointEvent([0,1.7,-4],0));
-  cameraAnimator.addEvent(new CameraRotationEvent(0,-70,0,10,20));
+  cameraAnimator.addEvent(new CameraLookAtEvent([Math.sin(glm.deg2rad(-70)),1.7,-4 + Math.cos(glm.deg2rad(-70))],10));
+  cameraAnimator.addEvent(new CameraSetRotationPointEvent([0,1.7,-4],20));
+  // cameraAnimator.addEvent(new CameraRotationEvent(0,-70,0,10,20));
 
+
+//
   //Scene 1 Indoors
-  cameraAnimator.addEvent(new CameraRotationEvent(0,60,0,2000,1250));
-  cameraAnimator.addEvent(new CameraRotationEvent(0,10,0,700,3250));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,60,0,3000,1250));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,10,0,700,4250));
 
   cameraAnimator.addEvent(new CameraRotationEvent(0,10,0,700,4300));
   cameraAnimator.addEvent(new CameraRotationEvent(0,80,0,2000,5000));
@@ -339,23 +354,23 @@ function initMove(){
   cameraAnimator.addEvent(new CameraRotationPointMoveEvent([0,1.7,-1.5],2000,4500));
   cameraAnimator.addEvent(new CameraRotationPointMoveEvent([1,1.7,-2],1000,6500));
 
-  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([4,1.6,-3.5],1500,7500));
-
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([2,1.6,-3.5],1500,7500));
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([5,1.6,-3.5],2000,11000))
   //Scene 2 House and Vortex
-  cameraAnimator.addEvent(new CameraMoveEvent([23,7.3,0],1, 11000));
-  cameraAnimator.addEvent(new CameraLookAtEvent([0,0,0],11010));
-  cameraAnimator.addEvent(new CameraSetRotationPointEvent([0,0,0],11000));
 
-  cameraAnimator.addEvent(new CameraRotationEvent(0,180,0,3000,11000));
-  cameraAnimator.addEvent(new CameraRotationEvent(0,98,20,1500,14000));
-  cameraAnimator.addEvent(new CameraRotationEvent(10,0,0,3000,15500));
+  cameraAnimator.addEvent(new CameraMoveEvent([23,7.3,0],1, 13000));
+  cameraAnimator.addEvent(new CameraLookAtEvent([0,0,0],13100));
+  cameraAnimator.addEvent(new CameraSetRotationPointEvent([0,0,0],13020));
 
-  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([0,7,-4],3000,14000));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,180,0,4000,13200));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,90,30,2000,17200));
 
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([2,12,-4],3000,15000));
+//
   //Scene 3 The Run
-  cameraAnimator.addEvent(new CameraMoveEvent([4,1.6,-3.5],1,19000));
-  cameraAnimator.addEvent(new CameraLookAtEvent([6,1.6,-1.5],19010));
-  cameraAnimator.addEvent(new CameraSetRotationPointEvent([4,1.6,-3.5],19020));
+  cameraAnimator.addEvent(new CameraMoveEvent([4,1.6,-3.5],1,20000));
+  cameraAnimator.addEvent(new CameraLookAtEvent([6,1.6,-3.5],20010));
+  cameraAnimator.addEvent(new CameraSetRotationPointEvent([4,1.6,-3.5],20020));
 
   var spotLightEvent = class extends CameraEvent{
       constructor(timestamp){
@@ -368,21 +383,19 @@ function initMove(){
   };
 
   cameraAnimator.addEvent(new spotLightEvent(21000));
-  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([6,1.6,-3.5],1000,19100));
-  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([6,1.6,-1],1000,20800));
-  cameraAnimator.addEvent(new CameraRotationEvent(0,120,20,1200,19100));
-  cameraAnimator.addEvent(new CameraRotationEvent(0,-80,-20,500,20600));
-  cameraAnimator.addEvent(new CameraRotationEvent(0,-80,-5,500,21100));
-  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([8,1.6,10],2000,21800));
-  // cameraAnimator.addEvent(new CameraRotationPointMoveEvent([8,1.6,10],2000,21800));
-  cameraAnimator.addEvent(new CameraRotationEvent(0,90,0,1000,19000));
-  cameraAnimator.addEvent(new CameraRotationEvent(0,15,0,1000,22500));
-  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([17,1.6,40],5000,23800));
-  cameraAnimator.addEvent(new CameraRotationEvent(0,90,30,750,23000));
-    cameraAnimator.addEvent(new CameraRotationEvent(0,90,00,750,23750));
-  cameraAnimator.addEvent(new CameraRotationEvent(0,-90,-30,750,25000));
-  cameraAnimator.addEvent(new CameraRotationEvent(0,-90,0,750,25750));
-  //add Camera Animator to update Queue
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([6,1.6,-3.5],1000,21100));
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([6,1.6,-1],1000,22800));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,90,20,1200,21100));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,-80,-30,500,22600));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,-80,0,500,23100));
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([8,1.6,10],2000,23800));
+
+  cameraAnimator.addEvent(new CameraRotationEvent(0,165,0,1000,25800));
+  cameraAnimator.addEvent(new CameraRotationPointMoveEvent([17,1.6,40],4200,25800));
+  cameraAnimator.addEvent(new CameraRotationEvent(0,0,90,750,27800));
+  cameraAnimator.addEvent(new CameraRotationEvent(20,-10,0,750,28550));
+  cameraAnimator.addEvent(new CameraRotationEvent(30,-5,0,700,29300));
+
   updateQueue.push(cameraAnimator);
   console.log(cameraAnimator.events);
 }

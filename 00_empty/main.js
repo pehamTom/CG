@@ -75,11 +75,12 @@ document.addEventListener("keyup", function(event) {
         } break;
         case "F":
         case "f":{
-            camera.isFree = !camera.isFree;
+            camera.isFree = true;
         } break;
         case "G":
         case "g":{
-            reset();
+          reset();
+          camera.isFree = false
           cameraAnimator.begin();
         } break;
     }
@@ -158,9 +159,24 @@ function init(resources) {
     node.push(new SetUniformSGNode("u_enableObjectTexture", false));
 
 
-    node = new AnimationSGNode(transAnimator(100,10000,[0,0,10]));
-    phongShaderNode.push(node);
-    initDeer(node,resources);
+    //init deer
+    let deerStart = [];
+    let deerEnd = [];
+    for(var i = 0; i < 5; i++){
+          deerEnd = [Math.random()*40,0,155];
+          deerStart = [10 + i,0,-55 + Math.random()*10];
+          let movementVec = vec3.sub([],deerEnd,deerStart);
+
+          let angle = Math.acos(vec3.dot(movementVec, [0,0,1])/(vec3.length(movementVec)));
+          node = new AnimationSGNode(transAnimator(100,Math.random() * 2000 + 21000,deerEnd));
+          phongShaderNode.push(node);
+          node = node.push(sg.translate(deerStart[0], deerStart[1], deerStart[2]));
+          node = node.push(sg.rotateY(180*angle/Math.PI));
+          initDeer(node,resources);
+    }
+
+
+    timeEventQueue.push({timeStamp: 15000, fire: function() {animate = true}});
 
     //setup black hole
     node = initMaterialSGNode(constantColorMaterial([0,0,0,1]));
@@ -171,7 +187,7 @@ function init(resources) {
     node = node.push(new AnimationSGNode(function() {
         var endTime = 15000; //animate for 15 seconds
         var elapsed = 0;
-        var endPos = [20, 50, -80];
+        var endPos = [20, 30, -40];
         var animate = false; //initially nothing is animated
         var interpolatedVec = [0,0,0];
         //start animation after 15 seconds
@@ -186,7 +202,7 @@ function init(resources) {
             if(! animate) return glm.translate(blackHolePos[0], blackHolePos[1], blackHolePos[2]);
             elapsed += timer.delta;
             let t = Math.min(elapsed/endTime, 1);
-            vec3.lerp(interpolatedVec, blackHolePos, blackHolePos, t); //linearly interpolate between starting and endpoint of animation
+            vec3.lerp(interpolatedVec, blackHolePos, endPos, t); //linearly interpolate between starting and endpoint of animation
             return glm.translate(interpolatedVec[0], interpolatedVec[1], interpolatedVec[2]);
         }
     }()));
@@ -255,7 +271,7 @@ function init(resources) {
 
     //setup spotLight, initially the spotLight is not on as in the movie
     //the spotlight is emitted from a "flashlight" the first person is holding.
-    spotLight = new SpotLightSgNode(Math.PI/16, function(vecToWriteInto) {
+    spotLight = new SpotLightSgNode(glm.deg2rad(30), function(vecToWriteInto) {
         //set the direction the light should look towards. In our case this is really simple because
         //the flashlight is always cast in the direction the camera is looking at. That means that
         //the vector must point towards the negative z-Axis and need not be transformed
