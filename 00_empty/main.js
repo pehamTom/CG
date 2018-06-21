@@ -75,11 +75,15 @@ document.addEventListener("keyup", function(event) {
         } break;
         case "F":
         case "f":{
-            camera.isFree = !camera.isFree;
+            camera.isFree = true;
+            cameraAnimator.reset();
         } break;
         case "G":
         case "g":{
-            cameraAnimator.begin();
+          reset();
+          camera.isFree = false
+          cameraAnimator.begin();
+          spotLight.deactivate();
         } break;
     }
 });
@@ -92,6 +96,10 @@ var updateQueue = []; //place objects that need to be updated in here (objects n
 var resetQueue = []; //place objects that can be resetted here (objects need a reset function)
 var timeEventQueue = []; //register timestamp and event here (objects need to have a timeStamp member and fire function)
 var scenegraph;
+
+timeEventQueue.push(textAnimator);
+resetQueue.push(textAnimator);
+
 /**
  * initializes OpenGL context, compile shader, and load buffers
  */
@@ -112,7 +120,7 @@ function init(resources) {
 
     blackHoleParticleEmitter.setVortex([0,0,0], [0,0,0.4]);
 
-    var snowEmitter = ps.createSnowEmitter([0, 0, 0], 20, 20, 5000, 200);
+    var snowEmitter = ps.createSnowEmitter([0, 0, 0], 20, 20, 10000, 500);
 
     //emitter need to be updated every frame
     updateQueue.push(fireEmitter);
@@ -130,16 +138,16 @@ function init(resources) {
 
     //distribute snowEmitter around the house. If an emitter was above the house
     //then snowparticles would fall into the house
-    node = particleShaderNode.push(sg.translate(30, 15, 0));
+    node = particleShaderNode.push(sg.translate(30, 30, 0));
     let snowEmitterNode = node.push(new RenderSGNode(emitterRenderer(snowEmitter)));
 
-    node = particleShaderNode.push(sg.translate(-30, 15, 0));
+    node = particleShaderNode.push(sg.translate(-30, 30, 0));
     node = node.push(snowEmitterNode);
 
-    node = particleShaderNode.push(sg.translate(0, 15, 30));
+    node = particleShaderNode.push(sg.translate(0, 30, 30));
     node = node.push(snowEmitterNode);
 
-    node = particleShaderNode.push(sg.translate(0, 15, -30));
+    node = particleShaderNode.push(sg.translate(0, 30, -30));
     node = node.push(snowEmitterNode);
 
     //setup ground plane
@@ -158,6 +166,25 @@ function init(resources) {
     node.push(new SetUniformSGNode("u_enableObjectTexture", false));
 
 
+    //init deer
+    let deerStart = [];
+    let deerEnd = [];
+    for(var i = 0; i < 5; i++){
+          deerEnd = [Math.random()*40,0,155];
+          deerStart = [10 + i,0,-55 + Math.random()*10];
+          let movementVec = vec3.sub([],deerEnd,deerStart);
+
+          let angle = Math.acos(vec3.dot(movementVec, [0,0,1])/(vec3.length(movementVec)));
+          node = new AnimationSGNode(transAnimator(100,Math.random() * 2000 + 21000,deerEnd));
+          phongShaderNode.push(node);
+          node = node.push(sg.translate(deerStart[0], deerStart[1], deerStart[2]));
+          node = node.push(sg.rotateY(180*angle/Math.PI));
+          initDeer(node,resources);
+    }
+
+
+    timeEventQueue.push({timeStamp: 15000, fire: function() {animate = true}});
+
     //setup black hole
     node = initMaterialSGNode(constantColorMaterial([0,0,0,1]));
     node = phongShaderNode.push(node);
@@ -167,7 +194,7 @@ function init(resources) {
     node = node.push(new AnimationSGNode(function() {
         var endTime = 15000; //animate for 15 seconds
         var elapsed = 0;
-        var endPos = [20, 50, -80];
+        var endPos = [20, 30, -40];
         var animate = false; //initially nothing is animated
         var interpolatedVec = [0,0,0];
         //start animation after 15 seconds
@@ -251,7 +278,7 @@ function init(resources) {
 
     //setup spotLight, initially the spotLight is not on as in the movie
     //the spotlight is emitted from a "flashlight" the first person is holding.
-    spotLight = new SpotLightSgNode(Math.PI/16, function(vecToWriteInto) {
+    spotLight = new SpotLightSgNode(glm.deg2rad(30), function(vecToWriteInto) {
         //set the direction the light should look towards. In our case this is really simple because
         //the flashlight is always cast in the direction the camera is looking at. That means that
         //the vector must point towards the negative z-Axis and need not be transformed
@@ -274,7 +301,7 @@ function init(resources) {
     treeNode = treeNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
     var trees = [];
     for(let i = 0; i < 500; i++) {
-        let radius = 50;
+        let radius = 90;
         let x = Math.cos(i);
     		let z = Math.sin(i);
     		x *= radius;
@@ -288,8 +315,6 @@ function init(resources) {
     treeNode.push(new NoAllocRenderSGNode(ForestRenderer(trees)));
     treeNode.push(new SetUniformSGNode("u_enableObjectTexture", false));
 
-    initDeer(phongShaderNode, resources);
-
     //setup house
     node = phongShaderNode.push(fireLight);
     node =  new initMaterialSGNode(lightWoodMaterial);
@@ -298,8 +323,8 @@ function init(resources) {
 	   node = node.push(sg.translate(2, 1.5, 0));
      houseNode.push(sg.draw(resources.house));
 
-    //test
-    // particleShaderNode.push(fireLight);
+    //insert lights also for the particles (different shader program)
+    particleShaderNode.push(moonLight);
     particleShaderNode.push(spotLight);
 
     node = houseNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
@@ -373,7 +398,8 @@ function init(resources) {
     node = tableNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
     node = node.push(new AdvancedTextureSGNode(resources.newspaper));
     node = node.push(sg.translate(0, 2.49, 1));
-    node = node.push(sg.rotateX(90));
+    node = node.push(sg.rotateX(-90));
+    node = node.push(sg.rotateZ(180));
     node = node.push(new NoAllocRenderSGNode(makeRect(0.6, 1)));
     node = node.push(new SetUniformSGNode("u_enableObjectTexture", false));
 
@@ -428,176 +454,8 @@ function init(resources) {
 
     //setup list of updatable objects
     updateQueue.push(camera);
-    cameraAnimator.addEvent(new CameraSetRotationPointEvent([0,0,0],100));
-    cameraAnimator.addEvent(new CameraLookAtEvent([0,0,0],101));
-    //cameraAnimator.addEvent(new CameraMoveRotationPointEvent([0,0,0],0.1,0));
-    //cameraAnimator.addEvent(new CameraQuadRotationEvent(90,0,0,2,100));
-    cameraAnimator.addEvent(new CameraQuadRotationEvent(0,90,0,2,2100));
-    //cameraAnimator.addEvent(new CameraMoveRotationPointEvent([10,0,0],2,1000));
-
-    updateQueue.push(cameraAnimator);
-}
-
-
-function initDeer(parent,resources){
-    var deer;
-    var body;
-    var brown = [.6,.3,.1,1];
-    var temp;
-    //Deer
-
-
-    deer = parent.push(sg.translate(0,1.7,0))
-    deer = deer.push(sg.rotateX(0));
-    //body
-    var deerBodyModel = {
-      position: deerBodyVertices,
-      index: deerBodyIndices,
-      normal: deerBodyNormals,
-      texture: []
-    };
-    for(var i = 0; i < deerBodyModel.index.length; i++){
-      deerBodyModel.texture.push(0);
-      deerBodyModel.texture.push(0);
-      deerBodyModel.texture.push(1);
-      deerBodyModel.texture.push(0);
-      deerBodyModel.texture.push(1);
-      deerBodyModel.texture.push(1);
-    }
-
-    body = deer.push(sg.translate(20,0,0));
-    temp = body.push(sg.rotateY(90));
-    temp = temp.push(sg.scale(1.3,1.3,1.3));
-    temp = temp.push(new SetUniformSGNode("u_enableObjectTexture",true));
-    temp = temp.push(new AdvancedTextureSGNode(resources.snowFloor));
-    temp = temp.push(new NoAllocRenderSGNode(modelRenderer(deerBodyModel)));
-    temp.push(new SetUniformSGNode("u_enableObjectTexture", false));
-    //neck
-    temp = body.push(sg.translate(0.35,0.9,0.35));
-    temp = temp.push(sg.rotateX(-40));
-    temp = temp.push(sg.scale(.25,.25,.5));
-    temp.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    //node.push(new NoAllocRenderSGNode(cylinderRenderer()));
-
-    //head
-   var deerHeadModel = {
-      position: deerHeadVertices,
-      index:    deerHeadIndices,
-      normal:   deerHeadNormals,
-      texture: []
-    };
-    for(var i = 0; i < deerHeadModel.index.length/3; i++){
-      deerHeadModel.texture.push(0);
-      deerHeadModel.texture.push(0);
-      deerHeadModel.texture.push(0);
-      deerHeadModel.texture.push(1);
-      deerHeadModel.texture.push(1);
-      deerHeadModel.texture.push(0);
-    }
-
-    temp = body.push(sg.translate(0,1,.40));
-    temp = temp.push(sg.rotateX(30));
-    temp = temp.push(sg.scale(1.5,1.5,1.5));
-    temp = temp.push(new SetUniformSGNode("u_enableObjectTexture", true));
-    temp = temp.push(new AdvancedTextureSGNode(resources.wood));
-    temp = temp.push(new NoAllocRenderSGNode(modelRenderer(deerHeadModel)));
-    temp.push(new SetUniformSGNode("u_enableObjectTexture", false));
-
-    // right front leg
-    temp = body.push(sg.rotateX(-25));
-    temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,0,0],[0,0.25,0],[-20,0,0])));
-    temp = temp.push(sg.translate(0,.1,-.1));
-    temp = temp.push(sg.rotateX(5));
-    node = temp.push(sg.scale(0.25,0.8,0.3));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,0,0],[0,-.35,0],[-60,0,0])));
-    temp = temp.push(sg.translate(0,-0.4,-.4));
-    temp = temp.push(sg.rotateX(80));
-    node = temp.push(sg.scale(.15,1.,.15));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,0,0],[0,-.40,0.03],[30,0,0])));
-    temp = temp.push(sg.translate(0,-.45,0.05));
-    temp = temp.push(sg.rotateX(-25));
-    node = temp.push(sg.scale(.2,0.1,.3));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    //left front leg
-
-    temp = body.push(sg.rotateX(-25));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,0.25,0],[-20,0,0])));
-    temp = temp.push(sg.translate(.7,.1,-.1));
-    temp = temp.push(sg.rotateX(5));
-    node = temp.push(sg.scale(0.25,0.8,0.3));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,-.35,0],[-60,0,0])));
-    temp = temp.push(sg.translate(0,-0.4,-.4));
-    temp = temp.push(sg.rotateX(80));
-    node = temp.push(sg.scale(.15,1.,.15));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,-.40,0.03],[30,0,0])));
-    temp = temp.push(sg.translate(0,-.45,0.05));
-    temp = temp.push(sg.rotateX(-25));
-    node = temp.push(sg.scale(.2,0.1,.3));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-
-    //right hind leg
-    temp = body.push(sg.translate(0,.25,-1.7));
-    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,0],[0,0,0],[50,0,0])));
-    temp = temp.push(sg.rotateX(-50));
-    node = temp.push(sg.scale(.2,.7,.6));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-    temp = temp.push(sg.translate(0,-0.3,-.2));
-    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,0],[0,0,.30],[40,0,0])));
-    temp = temp.push(sg.rotateX(-30));
-    node = temp.push(sg.scale(.2,.2,1));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-    temp = temp.push(sg.rotateX(-20));
-    temp = temp.push(sg.translate(0,-.4,-.5));
-    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,0],[0,0.35,0.15],[50,0,0])));
-    temp = temp.push(sg.rotateX(100));
-    node = temp.push(sg.scale(.15,.15,0.95));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-    temp = temp.push(sg.translate(0,0.075,0.5));
-    temp = temp.push(new AnimationSGNode(genericAnimator(0,500,1000,[0,0,0],[0,-0.05,-.03],[-80,0,0])));
-    temp = temp.push(sg.rotateX(60));
-    node = temp.push(sg.scale(.15,.25,.1));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-
-    //left hind leg
-    temp = body.push(sg.translate(0.7,.25,-1.7));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,0,0],[50,0,0])));
-    temp = temp.push(sg.rotateX(-50));
-    node = temp.push(sg.scale(.2,.7,.6));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-    temp = temp.push(sg.translate(0,-0.3,-.2));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,0,.30],[40,0,0])));
-    temp = temp.push(sg.rotateX(-30));
-    node = temp.push(sg.scale(.2,.2,1));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-    temp = temp.push(sg.rotateX(-20));
-    temp = temp.push(sg.translate(0,-.4,-.5));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,0.35,0.15],[50,0,0])));
-    temp = temp.push(sg.rotateX(100));
-    node = temp.push(sg.scale(.15,.15,0.95));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-    temp = temp.push(sg.translate(0,0.075,0.5));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,0,0],[0,-0.05,-.03],[-80,0,0])));
-    temp = temp.push(sg.rotateX(60));
-    node = temp.push(sg.scale(.15,.25,.1));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
-
-    //tail
-    temp = body.push(sg.translate(0.3,.8,-2));
-    temp = temp.push(sg.rotateX(60));
-    node = temp.push(sg.scale(.1,.1,.1));
-    node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+    initMove();
+    cameraAnimator.begin();
 }
 
 /**
@@ -622,7 +480,7 @@ function render(timeInMilliseconds) {
     var viewMatrix = [];
     mat4.identity(sceneMatrix);
     mat4.lookAt(viewMatrix, camera.pos, vec3.add([], camera.pos, camera.direction), camera.up);
-    mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 1, 2000);
+    mat4.perspective(projectionMatrix, camera.fov, aspectRatio, 0.1, 2000);
 
     //update
     update();
@@ -654,12 +512,10 @@ loadResources({
   cube: "../models/cube.obj",
   snowyTree: "../textures/snowy_tree.png",
   normalTree: "../textures/tree.png",
-  wood: "../textures/wood_plank.jpg",
   snowFloor: "../textures/snow_floor.jpg",
   windowTex: "../textures/window.png",
   carpetTex: "../textures/carpet.jpg",
   newspaper: "../textures/newspaper.jpg",
-  bookshelfTex: "../textures/bookshelf.jpg"
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
 

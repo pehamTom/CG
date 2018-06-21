@@ -114,7 +114,7 @@ function cubeRenderer() {
         0,1,0, 0,1,0, 0,1,0, 0,1,0
     ])
 
-    var cubeIndices =  new Uint16Array([
+    var cubeIndices = new Uint16Array([
        0,1,2, 0,2,3,
        4,5,6, 4,6,7,
        8,9,10, 8,10,11,
@@ -270,7 +270,7 @@ var doorAnimator = function(endTime) {
     var rotate = mat4.create();
     var transForm = mat4.create();
     var animate = false;
-    timeEventQueue.push({timeStamp: 10000, fire: function(){ animate = true}});
+    timeEventQueue.push({timeStamp: 9000, fire: function(){ animate = true}});
 
     resetQueue.push({reset: function() {
         elapsed = 0;
@@ -290,7 +290,7 @@ var doorAnimator = function(endTime) {
         elapsed += timer.delta;
         let t = elapsed / endTime;
         if(t > 1 ) {
-            reverse()
+            return transForm;
             t = 0;
         };
         quat.slerp(interpolatedQuat, beginQuat, rotateQuat, t);
@@ -303,8 +303,41 @@ var doorAnimator = function(endTime) {
         return transForm;
     }
 }
+var transAnimator = function(startTime,duration,destination){
+  var endTime = duration;
+  var elapsed = 0;
+  var animate = false;
+  var destination = destination;
+  var start = vec3.create();
+  var transformation = vec3.create();
 
-var genericAnimator = function(startTime,duration,reverseDuration,offset, rotpoint, angles){
+  timeEventQueue.push({timeStamp: startTime, fire: function(){ animate = true}});
+
+  resetQueue.push({ reset:function(){
+    elapsed = 0;
+  }});
+
+  function reverse() {
+      const h = start;
+      start = destination;
+      destination = h;
+      elapsed = 0;
+  };
+
+  return function(){
+    if(animate)
+    elapsed += timer.delta;
+    var t = elapsed/duration;
+    if(t > 1){
+      reverse();
+    }
+    vec3.lerp(transformation,start,destination,t)
+    return glm.translate(transformation[0],transformation[1],transformation[2]);
+  }
+}
+
+
+var genericAnimator = function(startTime,reverseDuration,duration, rotpoint, angles){
   var endTime = duration;
   var duration = duration;
   var reverseDuration = reverseDuration;
@@ -316,7 +349,7 @@ var genericAnimator = function(startTime,duration,reverseDuration,offset, rotpoi
   var inversRotpoint = vec3.negate([], rotpoint);
   var trans1 = glm.translate(inversRotpoint[0],inversRotpoint[1],inversRotpoint[2]);
   var trans2 = glm.translate(rotpoint[0],rotpoint[1],rotpoint[2]);
-  var trans3 = glm.translate(offset[0],offset[1],offset[2]);
+
   var rotate = mat4.create();
   var transForm = mat4.create();
   var animate = false;
@@ -353,28 +386,31 @@ var genericAnimator = function(startTime,duration,reverseDuration,offset, rotpoi
   };
 
   return function() {
-      if(! animate)return trans3;
+      if(! animate)return glm.translate(0,0,0);
 
       elapsed += timer.delta;
       let t = elapsed / endTime;
       if(t > 1 ) {
-          reverse()
+          reverse();
           t = 0;
       };
       quat.slerp(interpolatedQuat, beginQuat, rotateQuat, t);
       mat4.fromQuat(rotate, interpolatedQuat);
       mat4.copy(transForm, identityMat);
+
       mat4.multiply(transForm, transForm, trans2);
       mat4.multiply(transForm, transForm, rotate);
       mat4.multiply(transForm, transForm, trans1);
       return transForm;
+
   }
 }
+
+
 var identityMat = mat4.create();
 
 /**
-* returns matrix that performs rotation around points
-**/
+*returns matrix that performs rotation around points*/
 let cachedMat = [];
 let cachedVec = [];
 function rotateAroundPoint(point, rad, rotation){
@@ -428,4 +464,30 @@ function Material(ambient, diffuse, specular, emission, shininess) {
 **/
 function constantColorMaterial(color) {
     return new Material([0,0,0,1], [0,0,0,1], [0,0,0,1], color, 0);
+}
+
+textAnimator = {
+  timeStamp: 0,
+  timeStamps: [3000, 4500, 6500, 9000, 12000, 14000, 16000, 19000, 22000, 25000],
+  strings: ["Material with high specular component (metal) / Specular Highlight",
+            "Particle Effect: Fire",
+            "First Light Source: Emitting from Fire",
+            "Transparency of window through alpha texture",
+            "Material with mainly diffuse component (wood)",
+            "Light Source 2 (moon offscreen) illuminates the scene",
+            "Particle Effect: Snow",
+            "Particle Effect: Smoke",
+            "Particle Effect: Vortex",
+            "Spotlight",
+            "Billboarded Trees"],
+  index: 0,
+  fire: function() {
+    this.timeStamp = this.timeStamps[this.index];
+    displayText(this.strings[this.index]);
+    this.index++;
+  },
+  reset: function() {
+    this.timeStamp = 0;
+    this.index = 0;
+  }
 }
