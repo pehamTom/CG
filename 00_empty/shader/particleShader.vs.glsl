@@ -58,8 +58,6 @@ void main() {
 
   vec3 vortexVel = cross(u_angularVel, a_centerPos-u_vortexPos);
 
-
-
   //scale the particle with time
   vec3 scaledPos = a_position*(1.0+u_timeScaling*time);
 
@@ -74,7 +72,6 @@ void main() {
   vec3 worldPos = billboardedVert+movement;
   gl_Position = u_projection * u_modelView
     * vec4((worldPos), 1);
-
 
   vec4 eyePosition = u_modelView * vec4(worldPos,1);
 

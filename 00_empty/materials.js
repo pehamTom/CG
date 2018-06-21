@@ -50,16 +50,16 @@ var smokeEndMaterial = new Material([0.05, 0.05, 0.05, 0.1],
                                       [0, 0, 0, 0],
                                       0);
 
-var fireStartMaterial = new Material([0, 0, 0, 1],
+var fireEndMaterial = new Material([0, 0, 0, 1],
                                 [0, 0, 0, 1],
                                 [0, 0, 0, 1],
                                 [1, 0, 0, 1],
                                 0);
 
-var fireEndMaterial = new Material([0, 0, 0, 1],
+var fireStartMaterial = new Material([0, 0, 0, 1],
                                 [0, 0, 0, 1],
                                 [0, 0, 0, 1],
-                                [1, 0.6, 0, 1],
+                                [1, 1, 0, 1],
                                 0);
 
 
