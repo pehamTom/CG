@@ -104,11 +104,11 @@ function init(resources) {
     phongShader = createProgram(gl, resources.phongVs, resources.phongFs);
 
     var fireEmitter= new PlaneEmitter([0,0,0], 3000, 1300, 0.01, [0.0,1.3,0], 0.05,
-        0.01, [1,0,0,1], [1, 0.7, 0.3, 0.9], new FireParticle(null), 0.7, [.6,0,0], [0,0,.6]);
+        0.01, fireStartMaterial, fireEndMaterial, new FireParticle(null), 0.7, [.6,0,0], [0,0,.6]);
     var smokeEmitter = new SphereEmitter([1.9, 7.27818, 4.215], 1000, 3000, 0.0001, [0,1,0], 0.08,
-        0.050, [0.0,0.0,0.0,1.0], [0, 0, 0, 0.1], new Particle(null), 1, 0.3, 1);
+        0.050, smokeStartMaterial, smokeEndMaterial, new Particle(null), 1, 0.3, 1);
     var blackHoleParticleEmitter = new CircleEmitter([0, 0, 0], 2000, 1100, 0.0001, [0,0,0], 5,
-        0.01, [0.02,0.05,0.5,1], [0.7, 0.1, 0.5, 1], new Particle(null), 0, [1,0,0], [0,1,0], 200, -0.95);
+        0.01, blackHoleStartMaterial, blackHoleEndMaterial, new Particle(null), 0, [1,0,0], [0,1,0], 200, -0.95);
 
     blackHoleParticleEmitter.setVortex([0,0,0], [0,0,0.4]);
 
@@ -216,7 +216,7 @@ function init(resources) {
 
     //setup moon
     //the moon emits light, that's why it has a constant color (no specular or diffuse components)
-    node = initMaterialSGNode(constantColorMaterial([0.5, 1, 0.2, 1]));
+    node = initMaterialSGNode(constantColorMaterial([0.9, 0.9, 0.3, 1]));
     node = phongShaderNode.push(node);
     node = node.push(new AnimationSGNode(function() {
       //animate the moon slowly rise on the horizon
@@ -296,7 +296,11 @@ function init(resources) {
     node = phongShaderNode.push(node);
     let houseNode = node;
 	   node = node.push(sg.translate(2, 1.5, 0));
-    houseNode.push(sg.draw(resources.house));
+     houseNode.push(sg.draw(resources.house));
+
+    //test
+    // particleShaderNode.push(fireLight);
+    particleShaderNode.push(spotLight);
 
     node = houseNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
     node = node.push(new AdvancedTextureSGNode(resources.carpetTex));

@@ -68,9 +68,8 @@ vec4 calculateSimplePointLight(Light light, Material material, vec3 lightVec, ve
 	vec4 c_amb  = clamp(light.ambient * material.ambient, 0.0, 1.0);
 	vec4 c_diff = clamp(diffuse * light.diffuse * material.diffuse, 0.0, 1.0);
 	vec4 c_spec = clamp(spec * light.specular * material.specular, 0.0, 1.0);
-	vec4 c_em   = material.emission;
 
-	return c_amb + c_diff + c_spec + c_em;
+	return c_amb + c_diff + c_spec;
 }
 
 void main() {
@@ -95,5 +94,10 @@ void main() {
 		//the color is also weighted so that fragments that are close to the center
 		//of the cone are brighter. This looks more natural
 		gl_FragColor += 3.0 * (1.0 - (angleToSpotLight / u_spotLightAngle)) * calculateSimplePointLight(u_spotLight, u_material, v_spotLightVec, v_normalVec, v_eyeVec, textureColor);
+	}
+
+	if(! u_enableObjectTexture)
+  {
+		gl_FragColor += u_material.emission;
 	}
 }

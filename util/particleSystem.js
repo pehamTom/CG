@@ -16,6 +16,7 @@ function emitterRenderer(emitter) {
 	    var timeLocation = gl.getAttribLocation(shader, "a_time");
 	    var velocityLocation = gl.getAttribLocation(shader, "a_velocity");
 	    var lifeTimeLocation = gl.getAttribLocation(shader, "a_lifeTime");
+
 	    var massLocation = gl.getUniformLocation(shader, "u_mass");
 	    var finalColorLocation = gl.getUniformLocation(shader, "u_finalColor");
 	    var camRightLocation = gl.getUniformLocation(shader, "u_camRight");
@@ -24,16 +25,37 @@ function emitterRenderer(emitter) {
 	    var vortexPosLocation = gl.getUniformLocation(shader, "u_vortexPos");
 	    var angularVelLocation = gl.getUniformLocation(shader, "u_angularVel");
 	    var vortexFactorLocation = gl.getUniformLocation(shader, "u_vortexFactor");
+			var vortexPosLoc = gl.getUniformLocation(shader, "u_vortexPos");
+			var angularVelLoc = gl.getUniformLocation(shader, "u_angularVel");
 	    var dampeningLocation = gl.getUniformLocation(shader, "u_dampening");
 	    var timeScaleLocation = gl.getUniformLocation(shader, "u_timeScaling");
-		var positionLoc = gl.getAttribLocation(shader, "a_position");
-		var vortexPosLoc = gl.getUniformLocation(shader, "u_vortexPos");
-		var angularVelLoc = gl.getUniformLocation(shader, "u_angularVel");
+			var positionLoc = gl.getAttribLocation(shader, "a_position");
 
+			var ambientLoc = gl.getUniformLocation(context.shader, "u_material.ambient");
+			var diffuseLoc = gl.getUniformLocation(context.shader, "u_material.diffuse");
+			var specularLoc = gl.getUniformLocation(context.shader, "u_material.specular");
+			var shininessLoc = gl.getUniformLocation(context.shader, "u_material.shininess");
+			var emissionLoc = gl.getUniformLocation(context.shader, "u_material.emission");
+
+			var finalAmbientLoc = gl.getUniformLocation(context.shader, "u_finalMaterial.ambient");
+			var finalDiffuseLoc = gl.getUniformLocation(context.shader, "u_finalMaterial.diffuse");
+			var finalSpecularLoc = gl.getUniformLocation(context.shader, "u_finalMaterial.specular");
+			var finalShininessLoc = gl.getUniformLocation(context.shader, "u_finalMaterial.shininess");
+			var finalEmissionLoc = gl.getUniformLocation(context.shader, "u_finalMaterial.emission");
+
+			gl.uniform4fv(ambientLoc, em.material.ambient);
+			gl.uniform4fv(diffuseLoc, em.material.diffuse);
+			gl.uniform4fv(specularLoc, em.material.specular);
+			gl.uniform4fv(emissionLoc, em.material.emission);
+			gl.uniform1f(shininessLoc, em.material.shininess);
+
+			gl.uniform4fv(finalAmbientLoc, em.finalMaterial.ambient);
+			gl.uniform4fv(finalDiffuseLoc, em.finalMaterial.diffuse);
+			gl.uniform4fv(finalSpecularLoc, em.finalMaterial.specular);
+			gl.uniform4fv(finalEmissionLoc, em.finalMaterial.emission);
+			gl.uniform1f(finalShininessLoc, em.finalMaterial.shininess);
 		//set uniforms
         gl.uniform1f(massLocation, em.mass);
-        gl.uniform4fv(colorLocation, em.quadColors);
-        gl.uniform4fv(finalColorLocation, em.finalColors);
         gl.uniform3fv(generalDirLocation, em.direction);
 		gl.uniform1f(dampeningLocation, em.dampening);
 		gl.uniform1f(timeScaleLocation, em.timeScaling);
@@ -97,7 +119,7 @@ class Emitter {
 	* @param timeScaling - factor by which particle is scaled over time
 	**/
 	constructor(emitterPos, partsPerSec, maxLifeTime, mass, direction,
-		particleSize, fuzziness, startColor, finalColor, particleProto, timeScaling) {
+		particleSize, fuzziness, startMaterial, finalMaterial, particleProto, timeScaling) {
 
 		//particle vertex data, this is used to draw each instance of a particle
 	    this.quadVertices = new Float32Array([
@@ -117,15 +139,15 @@ class Emitter {
 		this.mass = mass;
 		this.direction = direction;
 		this.fuzziness = fuzziness;
-		this.quadColors = startColor;
-		this.finalColors = finalColor;
+		this.material = startMaterial;
+		this.finalMaterial = finalMaterial;
 		this.dampening = 0.1;
 		this.timeScaling = timeScaling;
 		this.activeVortex = false;
 
 		//local buffers
-	    this.positions = new Float32Array(this.maxNumPart*3);
-	    this.partTimes = new Float32Array(this.maxNumPart);
+    this.positions = new Float32Array(this.maxNumPart*3);
+    this.partTimes = new Float32Array(this.maxNumPart);
 		this.velocitys = new Float32Array(this.maxNumPart*3);
 		this.lifeTimes = new Float32Array(this.maxNumPart);
 		this.particleBuffer = [];
@@ -497,6 +519,6 @@ class FuzzyParticle extends Particle {
 var ps = {
 	createSnowEmitter: function(pos, length, width, maxLifeTime, partsPerSec) {
 		return new PlaneEmitter(pos, partsPerSec, maxLifeTime, 0.03, [0.0,-3.5,0], 0.07,
-	        0.01, [1,1,1,1], [1, 1, 1, 1], new FuzzyParticle(null), 0, [length,0,0], [0,0,width]);
+	        0.01, snowMaterial, snowMaterial, new FuzzyParticle(null), 0, [length,0,0], [0,0,width]);
 	}
 }
