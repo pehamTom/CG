@@ -505,12 +505,10 @@ loadResources({
   cube: "../models/cube.obj",
   snowyTree: "../textures/snowy_tree.png",
   normalTree: "../textures/tree.png",
-  wood: "../textures/wood_plank.jpg",
   snowFloor: "../textures/snow_floor.jpg",
   windowTex: "../textures/window.png",
   carpetTex: "../textures/carpet.jpg",
   newspaper: "../textures/newspaper.jpg",
-  bookshelfTex: "../textures/bookshelf.jpg"
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
 
