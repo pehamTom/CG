@@ -455,7 +455,6 @@ function init(resources) {
  * render one frame
  */
 function render(timeInMilliseconds) {
-
     timer.advance(timeInMilliseconds);
 
     //set background color to light gray
@@ -505,12 +504,12 @@ loadResources({
   cube: "../models/cube.obj",
   snowyTree: "../textures/snowy_tree.png",
   normalTree: "../textures/tree.png",
-  wood: "../textures/wood_plank.jpg",
   snowFloor: "../textures/snow_floor.jpg",
   windowTex: "../textures/window.png",
   carpetTex: "../textures/carpet.jpg",
   newspaper: "../textures/newspaper.jpg",
-  bookshelfTex: "../textures/bookshelf.jpg"
+  deerSkin: "../textures/deerSkin.png",
+  eyes: "../textures/eye.png"
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
 

@@ -323,7 +323,6 @@ var doorAnimator = function(endTime) {
         let t = elapsed / endTime;
         if(t > 1 ) {
             return transForm;
-            t = 0;
         };
         quat.slerp(interpolatedQuat, beginQuat, rotateQuat, t);
         mat4.fromQuat(rotate, interpolatedQuat);
@@ -335,6 +334,7 @@ var doorAnimator = function(endTime) {
         return transForm;
     }
 }
+
 var transAnimator = function(startTime,duration,destination){
   var endTime = duration;
   var elapsed = 0;
@@ -358,7 +358,7 @@ var transAnimator = function(startTime,duration,destination){
 
   return function(){
     if(animate)
-    elapsed += timer.delta;
+        elapsed += timer.delta;
     var t = elapsed/duration;
     if(t > 1){
       reverse();

@@ -150,11 +150,10 @@ function initDeer(parent,resources){
 
 
     body = deer.push(sg.translate(0,0,0));
+    body = body.push(new SetUniformSGNode("u_enableObjectTexture",true));
     body = body.push(new AdvancedTextureSGNode(resources.deerSkin));
     temp = body.push(sg.rotateY(90));
     node = temp.push(sg.scale(1.3,1.3,1.3));
-    node = node.push(new SetUniformSGNode("u_enableObjectTexture",true));
-    node = node.push(new AdvancedTextureSGNode(resources.deerSkin));
     node = node.push(new NoAllocRenderSGNode(modelRenderer(deerBodyModel)));
     //neck
     temp = body.push(sg.translate(0.35,0.9,0.35));
@@ -162,17 +161,9 @@ function initDeer(parent,resources){
     temp = temp.push(sg.scale(.25,.25,.5));
     temp.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
 
-    //head
-
-
-    temp = body.push(sg.translate(0,1,.40));
-    temp = temp.push(sg.rotateX(30));
-    temp = temp.push(sg.scale(1.5,1.5,1.5));
-    node = temp.push(new SetUniformSGNode("u_enableObjectTexture", true));
-    node = node.push(new AdvancedTextureSGNode(resources.eyes));
-    node = node.push(new NoAllocRenderSGNode(modelRenderer(deerHeadModel)));
 
     // right front leg
+
     temp = body.push(sg.rotateX(-25));
     temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,0.25,0],[-20,0,0])));
     temp = temp.push(sg.translate(0,.1,-.1));
@@ -268,6 +259,15 @@ function initDeer(parent,resources){
     node = temp.push(sg.scale(.1,.1,.1));
     node = node.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
     node = node.push(new SetUniformSGNode("u_enableObjectTexture", false));
+
+    //head
+    temp = body.push(sg.translate(0,1,.40));
+    temp = temp.push(sg.rotateX(30));
+    temp = temp.push(sg.scale(1.5,1.5,1.5));
+    node = temp.push(new SetUniformSGNode("u_enableObjectTexture", true));
+    node = node.push(new AdvancedTextureSGNode(resources.eyes));
+    node = node.push(new NoAllocRenderSGNode(modelRenderer(deerHeadModel)));
+
 }
 
 function initDeerBodyModel(){
