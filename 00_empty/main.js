@@ -169,7 +169,7 @@ function init(resources) {
           let movementVec = vec3.sub([],deerEnd,deerStart);
 
           let angle = Math.acos(vec3.dot(movementVec, [0,0,1])/(vec3.length(movementVec)));
-          node = new AnimationSGNode(transAnimator(100,Math.random() * 2000 + 21000,deerEnd));
+          node = new AnimationSGNode(transAnimator(7000,Math.random() * 2000 + 21000,deerEnd));
           phongShaderNode.push(node);
           node = node.push(sg.translate(deerStart[0], deerStart[1], deerStart[2]));
           node = node.push(sg.rotateY(180*angle/Math.PI));
@@ -508,7 +508,7 @@ loadResources({
   windowTex: "../textures/window.png",
   carpetTex: "../textures/carpet.jpg",
   newspaper: "../textures/newspaper.jpg",
-  deerSkin: "../textures/deerSkin.png",
+  deerSkin: "../textures/DeerSkin.png",
   eyes: "../textures/eye.png"
 }).then(function (resources /*an object containing our keys with the loaded resources*/) {
   init(resources);
@@ -519,6 +519,9 @@ loadResources({
 
 
 //reset all state
+
+
+
 function reset() {
     resetQueue.forEach(function(resettable) {
         resettable.reset();
