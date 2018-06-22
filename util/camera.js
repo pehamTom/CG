@@ -35,6 +35,9 @@ var camera = {
     moveCameraToTime:0 ,
 
 update: function(){
+
+  vec3.cross(this.rightVec, this.direction, this.up);
+  vec3.normalize(this.rightVec, this.rightVec);
   if(this.isFree){
       this.freeMovement();
   }else{
@@ -77,8 +80,6 @@ updatePosition: function(){
     var timeElapsed = timer.delta;
     var timeLeft,temp;
 
-    vec3.cross(this.rightVec, this.up, this.direction);
-    vec3.normalize(this.rightVec, this.rightVec);
     if(this.moveToDuration > 0){
       timeLeft = this.moveToDuration - this.moveToTime;
 
@@ -181,9 +182,13 @@ updatePosition: function(){
     this.deltaY = 0;	//don't rotate because of mouse movement
 
     var direction = vec3.subtract([], point, this.pos);
-vec3.normalize(direction, direction);
-this.pitch = Math.asin(direction[1]);
-this.yaw = Math.atan2(direction[2], direction[0]);
+    vec3.normalize(direction, direction);
+    this.pitch = Math.asin(direction[1]);
+    this.yaw = Math.atan2(direction[2], direction[0]);
+
+    this.direction[0] = Math.cos(this.pitch) * Math.cos(this.yaw);
+    this.direction[1] = Math.sin(this.pitch);
+    this.direction[2] = Math.cos(this.pitch) * Math.sin(this.yaw);
 },
 zoom: function(offSet) {
     this.fov += offSet*0.0001;
@@ -226,9 +231,8 @@ var cameraAnimator = {
   },
   update: function(){
     if(this.running){
-      var currTime =timer.elapsed - this.startTime;
 
-      console.log(this.currEvent + " =>" + currTime + ": " + this.events[this.currEvent].timestamp);
+      var currTime =timer.elapsed - this.startTime;
 
       if(currTime >= this.events[this.currEvent].timestamp){
 
@@ -385,5 +389,4 @@ function initMove(){
   cameraAnimator.addEvent(new CameraRotationEvent(30,-5,0,700,29300));
 
   updateQueue.push(cameraAnimator);
-  console.log(cameraAnimator.events);
 }
