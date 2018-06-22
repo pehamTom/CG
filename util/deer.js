@@ -65,6 +65,7 @@ var deerBodyTextureCoord = new Float32Array([0.483,0.628,0,0,0,1, 0,0,0,1,0.483,
                                             0,0,0.232,0.110,0,1, 0,0,0.430,0.198,0,1]);
 
 
+
 var deerHeadVertices = new Float32Array([0,0,0 , .45,0,0, 0.15,0,.2,
                                          .3,0,.2, .2,0,.5, .3,0,.5,
                                          0,.3,-0.1 , .45,.3,-0.1, .05,.3,-0.1,
@@ -100,6 +101,7 @@ var deerHeadIndices = new Uint16Array([0,1,2,
                                        15,14,12,
                                        15,12,13
                                        ]);
+
 var deerHeadNormals = new Float32Array([-0.42,-0.46,-0.11,
                                         0.21,-0.60,-0.25,
                                         -0.21,-0.98,0.07,
@@ -131,12 +133,14 @@ var deerHeadTextureCoord = new Float32Array([ 0,0,0,1,0.444,0.333, 0,0,0,1,0.231
 var deerBodyModel = null;
 var deerHeadModel = null;
 
+
 function initDeer(parent,resources){
     var deer;
     var body;
     var brown = [.6,.3,.1,1];
     var temp;
     //Deer
+
     if(deerBodyModel == null){
       initDeerBodyModel();
     }
@@ -155,11 +159,13 @@ function initDeer(parent,resources){
     temp = body.push(sg.rotateY(90));
     node = temp.push(sg.scale(1.3,1.3,1.3));
     node = node.push(new NoAllocRenderSGNode(modelRenderer(deerBodyModel)));
+
     //neck
     temp = body.push(sg.translate(0.35,0.9,0.35));
     temp = temp.push(sg.rotateX(-40));
     temp = temp.push(sg.scale(.25,.25,.5));
     temp.push(new NoAllocRenderSGNode(cubeRenderer(brown)));
+
 
 
     // right front leg
@@ -169,17 +175,23 @@ function initDeer(parent,resources){
     temp = temp.push(sg.translate(0,.1,-.1));
     temp = temp.push(sg.rotateX(5));
     node = temp.push(sg.scale(0.25,0.8,0.3));
+
     node.push(new NoAllocRenderSGNode(cubeRenderer()));
+
     temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,-.35,0],[-60,0,0])));
     temp = temp.push(sg.translate(0,-0.4,-.4));
     temp = temp.push(sg.rotateX(80));
     node = temp.push(sg.scale(.15,1.,.15));
+
     node.push(new NoAllocRenderSGNode(cubeRenderer()));
+
     temp = temp.push(new AnimationSGNode(genericAnimator(1000,500,1000,[0,-.40,0.03],[30,0,0])));
     temp = temp.push(sg.translate(0,-.45,0.05));
     temp = temp.push(sg.rotateX(-25));
     node = temp.push(sg.scale(.2,0.1,.3));
+
     node.push(new NoAllocRenderSGNode(cubeRenderer()));
+
     //left front leg
 
     temp = body.push(sg.rotateX(-25));
@@ -188,11 +200,13 @@ function initDeer(parent,resources){
     temp = temp.push(sg.rotateX(5));
     node = temp.push(sg.scale(0.25,0.8,0.3));
     node.push(new NoAllocRenderSGNode(cubeRenderer()));
-    temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,-.35,0],[-60,0,0])));
+    
+  temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,-.35,0],[-60,0,0])));
     temp = temp.push(sg.translate(0,-0.4,-.4));
     temp = temp.push(sg.rotateX(80));
     node = temp.push(sg.scale(.15,1.,.15));
     node.push(new NoAllocRenderSGNode(cubeRenderer()));
+  
     temp = temp.push(new AnimationSGNode(genericAnimator(2000,500,1000,[0,-.40,0.03],[30,0,0])));
     temp = temp.push(sg.translate(0,-.45,0.05));
     temp = temp.push(sg.rotateX(-25));
@@ -319,5 +333,5 @@ function initDeerHeadModel(){
     deerHeadModel.position =new Float32Array(positions);
     deerHeadModel.normal =new Float32Array(normals);
     deerHeadModel.texture = new Float32Array(deerHeadTextureCoord);
-    console.log(deerHeadModel.texture.length);
+  
 }

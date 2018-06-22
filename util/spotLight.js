@@ -28,4 +28,12 @@ class SpotLightSgNode extends LightSGNode {
   toggle() {
       this.active = ! this.active;
   }
+
+  deactivate() {
+    this.active = false;
+  }
+
+  activate() {
+    this.active = true;
+  }
 }

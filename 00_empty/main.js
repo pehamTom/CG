@@ -76,12 +76,14 @@ document.addEventListener("keyup", function(event) {
         case "F":
         case "f":{
             camera.isFree = true;
+            cameraAnimator.reset();
         } break;
         case "G":
         case "g":{
           reset();
           camera.isFree = false
           cameraAnimator.begin();
+          spotLight.deactivate();
         } break;
     }
 });
@@ -94,6 +96,10 @@ var updateQueue = []; //place objects that need to be updated in here (objects n
 var resetQueue = []; //place objects that can be resetted here (objects need a reset function)
 var timeEventQueue = []; //register timestamp and event here (objects need to have a timeStamp member and fire function)
 var scenegraph;
+
+timeEventQueue.push(textAnimator);
+resetQueue.push(textAnimator);
+
 /**
  * initializes OpenGL context, compile shader, and load buffers
  */
@@ -114,7 +120,7 @@ function init(resources) {
 
     blackHoleParticleEmitter.setVortex([0,0,0], [0,0,0.4]);
 
-    var snowEmitter = ps.createSnowEmitter([0, 0, 0], 20, 20, 5000, 200);
+    var snowEmitter = ps.createSnowEmitter([0, 0, 0], 20, 20, 10000, 500);
 
     //emitter need to be updated every frame
     updateQueue.push(fireEmitter);
@@ -132,16 +138,16 @@ function init(resources) {
 
     //distribute snowEmitter around the house. If an emitter was above the house
     //then snowparticles would fall into the house
-    node = particleShaderNode.push(sg.translate(30, 15, 0));
+    node = particleShaderNode.push(sg.translate(30, 30, 0));
     let snowEmitterNode = node.push(new RenderSGNode(emitterRenderer(snowEmitter)));
 
-    node = particleShaderNode.push(sg.translate(-30, 15, 0));
+    node = particleShaderNode.push(sg.translate(-30, 30, 0));
     node = node.push(snowEmitterNode);
 
-    node = particleShaderNode.push(sg.translate(0, 15, 30));
+    node = particleShaderNode.push(sg.translate(0, 30, 30));
     node = node.push(snowEmitterNode);
 
-    node = particleShaderNode.push(sg.translate(0, 15, -30));
+    node = particleShaderNode.push(sg.translate(0, 30, -30));
     node = node.push(snowEmitterNode);
 
     //setup ground plane
@@ -295,7 +301,7 @@ function init(resources) {
     treeNode = treeNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
     var trees = [];
     for(let i = 0; i < 500; i++) {
-        let radius = 50;
+        let radius = 90;
         let x = Math.cos(i);
     		let z = Math.sin(i);
     		x *= radius;
@@ -317,8 +323,8 @@ function init(resources) {
 	   node = node.push(sg.translate(2, 1.5, 0));
      houseNode.push(sg.draw(resources.house));
 
-    //test
-    // particleShaderNode.push(fireLight);
+    //insert lights also for the particles (different shader program)
+    particleShaderNode.push(moonLight);
     particleShaderNode.push(spotLight);
 
     node = houseNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
@@ -392,7 +398,8 @@ function init(resources) {
     node = tableNode.push(new SetUniformSGNode("u_enableObjectTexture", true));
     node = node.push(new AdvancedTextureSGNode(resources.newspaper));
     node = node.push(sg.translate(0, 2.49, 1));
-    node = node.push(sg.rotateX(90));
+    node = node.push(sg.rotateX(-90));
+    node = node.push(sg.rotateZ(180));
     node = node.push(new NoAllocRenderSGNode(makeRect(0.6, 1)));
     node = node.push(new SetUniformSGNode("u_enableObjectTexture", false));
 
@@ -502,7 +509,6 @@ loadResources({
   table: "../models/table.obj",
   chair: "../models/chair.obj",
   cube: "../models/cube.obj",
-  snowyTree: "../textures/snowy_tree.png",
   normalTree: "../textures/tree.png",
   snowFloor: "../textures/snow_floor.jpg",
   windowTex: "../textures/window.png",

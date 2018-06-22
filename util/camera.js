@@ -243,6 +243,7 @@ updatePosition: function(){
     this.direction[0] = Math.cos(this.pitch) * Math.cos(this.yaw);
     this.direction[1] = Math.sin(this.pitch);
     this.direction[2] = Math.cos(this.pitch) * Math.sin(this.yaw);
+
   },
   /**
    * changes camera field of view
@@ -356,6 +357,7 @@ class CameraRotationEvent extends CameraEvent{
 //camera rotaton point move event
 //takes a timestamp and a duration as well as a position to move to.
 //When the timestamp is reached the camera and the rotationPoint will be translated to it via a linear interpolation.
+
 class CameraRotationPointMoveEvent extends CameraEvent{
   constructor(pos,duration,timestamp){
     super(duration,timestamp)
@@ -370,6 +372,7 @@ class CameraRotationPointMoveEvent extends CameraEvent{
 //camera move event
 //moves the camera independent of the rotation point
 class CameraMoveEvent extends CameraEvent{
+
   constructor(pos,duration,timestamp){
     super(duration,timestamp)
     this.pos = pos;
@@ -423,7 +426,6 @@ function initMove(){
   cameraAnimator.addEvent(new CameraRotationEvent(0,-10,-2,1000,7500));
   cameraAnimator.addEvent(new CameraRotationEvent(0,-20,0,500,8500));
 
-
   cameraAnimator.addEvent(new CameraRotationPointMoveEvent([0,1.7,-1.5],2000,4500));
   cameraAnimator.addEvent(new CameraRotationPointMoveEvent([1,1.7,-2],1000,6500));
 
@@ -470,5 +472,6 @@ function initMove(){
   cameraAnimator.addEvent(new CameraRotationEvent(30,-5,0,700,29300));
 
   //put cameraAnimator in update Queue
+  
   updateQueue.push(cameraAnimator);
 }

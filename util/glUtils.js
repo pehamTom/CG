@@ -114,7 +114,7 @@ function cubeRenderer() {
         0,1,0, 0,1,0, 0,1,0, 0,1,0
     ])
 
-    var cubeIndices =  new Uint16Array([
+    var cubeIndices = new Uint16Array([
        0,1,2, 0,2,3,
        4,5,6, 4,6,7,
        8,9,10, 8,10,11,
@@ -270,7 +270,7 @@ var doorAnimator = function(endTime) {
     var rotate = mat4.create();
     var transForm = mat4.create();
     var animate = false;
-    timeEventQueue.push({timeStamp: 10000, fire: function(){ animate = true}});
+    timeEventQueue.push({timeStamp: 9000, fire: function(){ animate = true}});
 
     resetQueue.push({reset: function() {
         elapsed = 0;
@@ -318,11 +318,13 @@ var transAnimator = function(startTime,duration,destination){
   var start = vec3.create();       //start point
   var transformation = vec3.create();
   //push this to time event queue so that is starts when the timestamp is reached
+
   timeEventQueue.push({timeStamp: startTime, fire: function(){ animate = true}});
 
   resetQueue.push({ reset:function(){
     elapsed = 0;
   }});
+  
   //reverse the animation
   function reverse() {
       const h = start;
@@ -363,6 +365,7 @@ var genericAnimator = function(startTime,reverseDuration,duration, rotpoint, ang
   var trans1 = glm.translate(inversRotpoint[0],inversRotpoint[1],inversRotpoint[2]);
           //invers translation for making the object rotate around a point
   var trans2 = glm.translate(rotpoint[0],rotpoint[1],rotpoint[2]);
+
           //translation for making the object rotate a round a point
   var rotate = mat4.create();       //holds the roation Matrix
   var transForm = mat4.create();    //holds the tranformation Matrix
@@ -482,4 +485,30 @@ function Material(ambient, diffuse, specular, emission, shininess) {
 **/
 function constantColorMaterial(color) {
     return new Material([0,0,0,1], [0,0,0,1], [0,0,0,1], color, 0);
+}
+
+textAnimator = {
+  timeStamp: 0,
+  timeStamps: [3000, 4500, 6500, 9000, 12000, 14000, 16000, 19000, 22000, 25000],
+  strings: ["Material with high specular component (metal) / Specular Highlight",
+            "Particle Effect: Fire",
+            "First Light Source: Emitting from Fire",
+            "Transparency of window through alpha texture",
+            "Material with mainly diffuse component (wood)",
+            "Light Source 2 (moon offscreen) illuminates the scene",
+            "Particle Effect: Snow",
+            "Particle Effect: Smoke",
+            "Particle Effect: Vortex",
+            "Spotlight",
+            "Billboarded Trees"],
+  index: 0,
+  fire: function() {
+    this.timeStamp = this.timeStamps[this.index];
+    displayText(this.strings[this.index]);
+    this.index++;
+  },
+  reset: function() {
+    this.timeStamp = 0;
+    this.index = 0;
+  }
 }
