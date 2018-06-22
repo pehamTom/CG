@@ -291,7 +291,6 @@ var doorAnimator = function(endTime) {
         let t = elapsed / endTime;
         if(t > 1 ) {
             return transForm;
-            t = 0;
         };
         quat.slerp(interpolatedQuat, beginQuat, rotateQuat, t);
         mat4.fromQuat(rotate, interpolatedQuat);
@@ -303,65 +302,84 @@ var doorAnimator = function(endTime) {
         return transForm;
     }
 }
+/**
+  * trans Animator is used to give object time dependent transformation.
+  * It takes a start time and a duration that controll how long the animation is and when it begins.
+  * Destination specifies by how mutch the object should be translated.
+  * @param startTime time at which the animation startPos
+  * @param duration duration of the Animation
+  * @param destination relative movement
+  **/
 var transAnimator = function(startTime,duration,destination){
   var endTime = duration;
-  var elapsed = 0;
-  var animate = false;
-  var destination = destination;
-  var start = vec3.create();
+  var elapsed = 0;                 //time since the animations started
+  var animate = false;             //controlls the animation
+  var destination = destination;   //amount to translate by
+  var start = vec3.create();       //start point
   var transformation = vec3.create();
+  //push this to time event queue so that is starts when the timestamp is reached
 
   timeEventQueue.push({timeStamp: startTime, fire: function(){ animate = true}});
 
   resetQueue.push({ reset:function(){
     elapsed = 0;
   }});
-
+  
+  //reverse the animation
   function reverse() {
       const h = start;
       start = destination;
       destination = h;
       elapsed = 0;
   };
-
+  //this function will be used to update the transformation matrix depending on the frametime
   return function(){
     if(animate)
-    elapsed += timer.delta;
+        elapsed += timer.delta;
     var t = elapsed/duration;
     if(t > 1){
-      reverse();
+      return [0,0,0];
+      //reverse();
     }
     vec3.lerp(transformation,start,destination,t)
     return glm.translate(transformation[0],transformation[1],transformation[2]);
   }
 }
 
-
+/**Animator that is used to perform quat roations on objects in the Scene graph
+* @param startTime time at which the animation startPos
+* @param reverseDuration revers duration of the Animation
+* @param duration duration of the Animation
+* @param rotpoint Point around which the object rotates
+* @param angles X Y Z Angle to rotate by
+**/
 var genericAnimator = function(startTime,reverseDuration,duration, rotpoint, angles){
   var endTime = duration;
-  var duration = duration;
   var reverseDuration = reverseDuration;
-  var elapsed = 0;
+  var elapsed = 0;                          //time since the animation started
   var isreversing = false;
-  var rotateQuat = quat.create();
-  var beginQuat = quat.create();
-  var interpolatedQuat = quat.create();
+  var rotateQuat = quat.create();           //end quad will be filled by using the angles
+  var beginQuat = quat.create();            //start quat is identity at the beginning
+  var interpolatedQuat = quat.create();      //holds the interpolated quat
   var inversRotpoint = vec3.negate([], rotpoint);
   var trans1 = glm.translate(inversRotpoint[0],inversRotpoint[1],inversRotpoint[2]);
+          //invers translation for making the object rotate around a point
   var trans2 = glm.translate(rotpoint[0],rotpoint[1],rotpoint[2]);
 
-  var rotate = mat4.create();
-  var transForm = mat4.create();
+          //translation for making the object rotate a round a point
+  var rotate = mat4.create();       //holds the roation Matrix
+  var transForm = mat4.create();    //holds the tranformation Matrix
   var animate = false;
   timeEventQueue.push({timeStamp: startTime, fire: function(){ animate = true}});
 
   quat.identity(rotateQuat);
-
+  //setup the rotation quat
   quat.rotateX(rotateQuat,rotateQuat, angles[0]*Math.PI/180);
   quat.rotateY(rotateQuat,rotateQuat, angles[1]*Math.PI/180);
   quat.rotateZ(rotateQuat,rotateQuat, angles[2]*Math.PI/180);
   quat.normalize(rotateQuat,rotateQuat);
 
+  //push this on reset queue so that all animations a reset.
   resetQueue.push({reset: function() {
       elapsed = 0;
       quat.rotateX(rotateQuat,quat.create(), angles[0]*Math.PI/180);
@@ -371,6 +389,9 @@ var genericAnimator = function(startTime,reverseDuration,duration, rotpoint, ang
       beginQuat = quat.create();
       animate = false;
   }});
+
+  //revereses the direction of the animations
+  //usefulle for looping animations
   function reverse() {
       if(isreversing){
         endTime = reverseDuration;
@@ -384,7 +405,7 @@ var genericAnimator = function(startTime,reverseDuration,duration, rotpoint, ang
       rotateQuat = h;
       elapsed = 0;
   };
-
+  //this function will be called every frame and update the transForm Matrix according to the last frametime
   return function() {
       if(! animate)return glm.translate(0,0,0);
 
