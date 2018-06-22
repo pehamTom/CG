@@ -174,38 +174,6 @@ function cubeRenderer() {
     }
 }
 
-function normalRenderer(model) {
-    var vertexBuffer;
-      var lineVertices = [];
-            for(var i = 0; i < model.position.length; i++){
-            lineVertices.push(model.position[i]);
-            lineVertices.push(model.position[i + 1]);
-            lineVertices.push(model.position[i + 2]);
-                lineVertices.push(model.normal[i] * 1);
-                lineVertices.push(model.normal[i + 1] * 1);
-                lineVertices.push(model.normal[i + 2] * 1);
-            }
-    function init(){
-
-      vertexBuffer = setupStaticArrayBuffer(new Float32Array(lineVertices));
-    }
-    return function(context){
-
-
-        if(vertexBuffer == null) {
-            init();
-        }
-        let shader = context.shader;
-        let gl = context.gl;
-
-        let positionLoc = gl.getAttribLocation(shader, "a_position");
-
-        setArrayBufferFloat(vertexBuffer, positionLoc, 3);
-
-        gl.drawArrays(gl.LINES, 0, lineVertices.length/6);
-    }
-}
-
 /**
 * This SGNode is a slight improvement on the SGNode provided by the framework. The
 * RenderSGNode allocates storage space for a new matrix each time the render function

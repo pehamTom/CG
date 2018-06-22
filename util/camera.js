@@ -27,6 +27,7 @@ var camera = {
     rotationTime: 0,                //time since the Rotation started
     rotationPoint: vec3.create(),   //point around which the camera is rotating
     //Movement
+  
     moveToPoint: vec3.create(),     //when a cameraRotationPointMoveEvent is used, this will holde the point to which the RotationPoint is translate to
     moveToDuration: 0,              //time the animation takes to move the RotationPoint to moveToPoint
     moveToTime:0 ,                  //time since the start of the Movement animation
@@ -41,7 +42,6 @@ var camera = {
       //update the rightVec for billboarding
       vec3.cross(this.rightVec, this.direction, this.up);
       vec3.normalize(this.rightVec, this.rightVec);
-
 
       if(this.isFree){
           //camera is in free moving mode
